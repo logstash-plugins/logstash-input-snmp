@@ -82,4 +82,45 @@ describe LogStash::Inputs::Snmp do
       end
     end
   end
+
+  context "@metadata" do
+    before do
+      expect(LogStash::SnmpClient).to receive(:new).and_return(mock_client)
+      expect(mock_client).to receive(:get).and_return({"foo" => "bar"})
+    end
+
+    it "shoud add @metadata fields and add default host field" do
+      config = <<-CONFIG
+          input {
+            snmp {
+              get => ["1.3.6.1.2.1.1.1.0"]
+              hosts => [{host => "udp:127.0.0.1/161" community => "public"}]
+            }
+          }
+      CONFIG
+      event = input(config) { |_, queue| queue.pop }
+
+      expect(event.get("[@metadata][host_protocol]")).to eq("udp")
+      expect(event.get("[@metadata][host_address]")).to eq("127.0.0.1")
+      expect(event.get("[@metadata][host_port]")).to eq("161")
+      expect(event.get("[@metadata][host_community]")).to eq("public")
+      expect(event.get("host")).to eq("127.0.0.1")
+    end
+
+    it "shoud add custom host field" do
+      config = <<-CONFIG
+          input {
+            snmp {
+              get => ["1.3.6.1.2.1.1.1.0"]
+              hosts => [{host => "udp:127.0.0.1/161" community => "public"}]
+              add_field => { host => "%{[@metadata][host_protocol]}:%{[@metadata][host_address]}/%{[@metadata][host_port]},%{[@metadata][host_community]}" }
+            }
+          }
+      CONFIG
+      event = input(config) { |_, queue| queue.pop }
+
+      expect(event.get("host")).to eq("udp:127.0.0.1/161,public")
+    end
+  end
 end
+

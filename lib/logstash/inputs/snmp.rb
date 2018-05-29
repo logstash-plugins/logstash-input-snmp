@@ -53,6 +53,9 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
   # The default, `30`, means poll each host every 30second.
   config :interval, :validate => :number, :default => 30
 
+  # Add the default "host" field to the event.
+  config :add_field, :validate => :hash, :default => { "host" => "%{[@metadata][host_address]}" }
+
   def register
     validate_oids!
     validate_hosts!
@@ -71,10 +74,19 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
       retries = host["retries"] || 2
       timeout = host["timeout"] || 1000
 
+      host_details = host_name.match(HOST_REGEX)
+      raise(LogStash::ConfigurationError, "invalid format for host option '#{host_name}'") unless host_details
+      raise(LogStash::ConfigurationError, "only the udp protocol is supported for now") unless host_details[:host_protocol].to_s =~ /udp/i
+
       definition = {
         :client => LogStash::SnmpClient.new(host_name, community, version, retries, timeout, mib),
         :get => Array(get),
         :walk => Array(walk),
+
+        :host_protocol => host_details[:host_protocol],
+        :host_address => host_details[:host_address],
+        :host_port => host_details[:host_port],
+        :host_community => community,
       }
       @client_definitions << definition
     end
@@ -104,6 +116,14 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
         end
 
         unless result.empty?
+          metadata = {
+              "host_protocol" => definition[:host_protocol],
+              "host_address" => definition[:host_address],
+              "host_port" => definition[:host_port],
+              "host_community" => definition[:host_community],
+          }
+          result["@metadata"] = metadata
+
           event = LogStash::Event.new(result)
           decorate(event)
           queue << event
@@ -120,7 +140,7 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
   private
 
   OID_REGEX = /^\.?([0-9\.]+)$/
-  HOST_REGEX = /^(udp|tcp):.+\/\d+$/i
+  HOST_REGEX = /^(?<host_protocol>udp|tcp):(?<host_address>.+)\/(?<host_port>\d+)$/i
 
   def validate_oids!
     @get = Array(@get).map do |oid|
@@ -149,10 +169,6 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
 
     @hosts.each do |host|
       raise(LogStash::ConfigurationError, "each host definition must have a \"host\" option") if !host.is_a?(Hash) || host["host"].nil?
-      unless host["host"] =~ HOST_REGEX
-        raise(LogStash::ConfigurationError, "invalid host option format")
-      end
-      raise(LogStash::ConfigurationError, "tcp is not yet supported, only udp") if $1 =~ /tcp/i
     end
   end
 end
