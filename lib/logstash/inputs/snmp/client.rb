@@ -14,6 +14,7 @@ java_import "org.snmp4j.smi.OID"
 java_import "org.snmp4j.smi.OctetString"
 java_import "org.snmp4j.smi.VariableBinding"
 java_import "org.snmp4j.transport.DefaultUdpTransportMapping"
+java_import "org.snmp4j.transport.DefaultTcpTransportMapping"
 java_import "org.snmp4j.util.TreeUtils"
 java_import "org.snmp4j.util.DefaultPDUFactory"
 java_import "org.snmp4j.asn1.BER"
@@ -24,12 +25,19 @@ module LogStash
 
   class SnmpClient
 
-    def initialize(address, community, version, retries, timeout, mib)
-      @target = build_target(address, community, version, retries, timeout)
+    def initialize(protocol, address, port, community, version, retries, timeout, mib)
+      transport = case protocol.to_s
+        when "udp"
+          DefaultUdpTransportMapping.new
+        when "tcp"
+          DefaultTcpTransportMapping.new
+        else
+          raise(SnmpClientError, "invalid transport protocol specified '#{protocol.to_s}', expecting 'udp' or 'tcp'")
+        end
+
+      @target = build_target("#{protocol}:#{address}/#{port}", community, version, retries, timeout)
       @mib = mib
 
-      # for now hardwired udp transport
-      transport = DefaultUdpTransportMapping.new
       @snmp = Snmp.new(transport)
       transport.listen()
     end

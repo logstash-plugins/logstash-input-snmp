@@ -54,13 +54,15 @@ describe LogStash::Inputs::Snmp do
           {"get" => ["1.0"], "hosts" => [{"host" => "udp:localhost/161"}]},
           {"get" => ["1.0"], "hosts" => [{"host" => "udp:127.0.0.1/112345"}]},
           {"get" => ["1.0"], "hosts" => [{"host" => "udp:127.0.0.1/161", "community" => "public"}]},
+          {"get" => ["1.0"], "hosts" => [{"host" => "tcp:127.0.0.1/112345"}]},
+          {"get" => ["1.0"], "hosts" => [{"host" => "tcp:127.0.0.1/161", "community" => "public"}]},
       ]
     }
 
     let(:invalid_configs) {
       [
           {"get" => ["1.0"], "hosts" => [{"host" => "aaa:127.0.0.1/161"}]},
-          {"get" => ["1.0"], "hosts" => [{"host" => "tcp:127.0.0.1/161"}]},
+          {"get" => ["1.0"], "hosts" => [{"host" => "tcp.127.0.0.1/161"}]},
           {"get" => ["1.0"], "hosts" => [{"host" => "localhost"}]},
           {"get" => ["1.0"], "hosts" => [{"host" => "localhost/161"}]},
           {"get" => ["1.0"], "hosts" => [{"host" => "udp:127.0.0.1"}]},

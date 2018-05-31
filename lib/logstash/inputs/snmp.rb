@@ -74,18 +74,23 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
       retries = host["retries"] || 2
       timeout = host["timeout"] || 1000
 
+      # TODO: move these validations in a custom validator so it happens before the register method is called.
       host_details = host_name.match(HOST_REGEX)
       raise(LogStash::ConfigurationError, "invalid format for host option '#{host_name}'") unless host_details
-      raise(LogStash::ConfigurationError, "only the udp protocol is supported for now") unless host_details[:host_protocol].to_s =~ /udp/i
+      raise(LogStash::ConfigurationError, "only udp & tcp protocols are supported for host option '#{host_name}'") unless host_details[:host_protocol].to_s =~ /^(?:udp|tcp)$/i
+
+      protocol = host_details[:host_protocol]
+      address = host_details[:host_address]
+      port = host_details[:host_port]
 
       definition = {
-        :client => LogStash::SnmpClient.new(host_name, community, version, retries, timeout, mib),
+        :client => LogStash::SnmpClient.new(protocol, address, port, community, version, retries, timeout, mib),
         :get => Array(get),
         :walk => Array(walk),
 
-        :host_protocol => host_details[:host_protocol],
-        :host_address => host_details[:host_address],
-        :host_port => host_details[:host_port],
+        :host_protocol => protocol,
+        :host_address => address,
+        :host_port => port,
         :host_community => community,
       }
       @client_definitions << definition
