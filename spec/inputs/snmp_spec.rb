@@ -56,6 +56,8 @@ describe LogStash::Inputs::Snmp do
           {"get" => ["1.0"], "hosts" => [{"host" => "udp:127.0.0.1/161", "community" => "public"}]},
           {"get" => ["1.0"], "hosts" => [{"host" => "tcp:127.0.0.1/112345"}]},
           {"get" => ["1.0"], "hosts" => [{"host" => "tcp:127.0.0.1/161", "community" => "public"}]},
+          {"get" => ["1.0"], "hosts" => [{"host" => "udp:127.0.0.1/161", "version" => "1"}]},
+          {"get" => ["1.0"], "hosts" => [{"host" => "udp:127.0.0.1/161", "version" => "2c"}]},
       ]
     }
 
@@ -69,6 +71,8 @@ describe LogStash::Inputs::Snmp do
           {"get" => ["1.0"], "hosts" => [{"host" => "udp:127.0.0.1/"}]},
           {"get" => ["1.0"], "hosts" => [{"host" => "udp:127.0.0.1/aaa"}]},
           {"get" => ["1.0"], "hosts" => [{"host" => "udp:127.0.0.1/161"}, {"host" => "udp:127.0.0.1/aaa"}]},
+          {"get" => ["1.0"], "hosts" => [{"host" => "udp:127.0.0.1/161", "version" => "2"}]},
+          {"get" => ["1.0"], "hosts" => [{"host" => "udp:127.0.0.1/161", "version" => "3"}]},
           {"get" => ["1.0"], "hosts" => ""},
           {"get" => ["1.0"], "hosts" => []},
           {"get" => ["1.0"] },

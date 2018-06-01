@@ -26,7 +26,7 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
   #  for example `host => "udp:127.0.0.1/161"`
   # Each host definition can optionally include the following keys and values:
   #  `community` with a default value of `public`
-  #  `version` with a default value of `2c`
+  #  `version` `1` or `2c` with a default value of `2c`
   #  `retries` with a detault value of `2`
   #  `timeout` in milliseconds with a default value of `1000`
   config :hosts, :validate => :array  #[ {"host" => "udp:127.0.0.1/161", "community" => "public"} ]
@@ -71,6 +71,8 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
       host_name = host["host"]
       community = host["community"] || "public"
       version = host["version"] || "2c"
+      raise(LogStash::ConfigurationError, "only protocol version '1' and '2c' are supported for host option '#{host_name}'") unless version =~ VERSION_REGEX
+
       retries = host["retries"] || 2
       timeout = host["timeout"] || 1000
 
@@ -146,6 +148,7 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
 
   OID_REGEX = /^\.?([0-9\.]+)$/
   HOST_REGEX = /^(?<host_protocol>udp|tcp):(?<host_address>.+)\/(?<host_port>\d+)$/i
+  VERSION_REGEX =/^1|2c$/
 
   def validate_oids!
     @get = Array(@get).map do |oid|

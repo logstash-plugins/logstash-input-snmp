@@ -136,8 +136,14 @@ module LogStash
     end
 
     def parse_version(version)
-      # TODO implement
-      SnmpConstants.version2c
+      case version.to_s
+      when "2c"
+        SnmpConstants.version2c
+      when "1"
+        SnmpConstants.version1
+      else
+        raise(SnmpClientError, "protocol version '#{version}' is not supported, expected versions are '1' and '2c'")
+      end
     end
   end
 end
