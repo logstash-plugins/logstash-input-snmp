@@ -104,13 +104,15 @@ module LogStash
 
     private
 
+    NULL_STRING = "null".freeze
+
     def coerce(variable)
       variable_syntax = variable.getSyntax
       # puts("variable.getSyntaxString=#{variable.getSyntaxString}")
       case variable_syntax
-      when BER::OCTETSTRING
+      when BER::OCTETSTRING, BER::BITSTRING
         variable.toString
-      when BER::TIMETICKS, BER::COUNTER, BER::COUNTER32
+      when BER::TIMETICKS, BER::COUNTER, BER::COUNTER32, BER::COUNTER64
         variable.toLong
       when BER::INTEGER, BER::INTEGER32, BER::GAUGE, BER::GAUGE32
         variable.toInt
@@ -118,6 +120,8 @@ module LogStash
         variable.toString
       when BER::OID
         variable.toString
+      when BER::NULL
+        NULL_STRING
       when BER::NOSUCHOBJECT
         "Error: No Such Instance currently exists at this OID"
       else
