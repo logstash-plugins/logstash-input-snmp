@@ -42,8 +42,8 @@ module LogStash
       transport.listen()
     end
 
-    def get(oids, strip_root = 0)
-      pdu = PDU.new
+    def get(oids, strip_root = 0, *pdu)
+      pdu = pdu || PDU.new
       Array(oids).each { |oid| pdu.add(VariableBinding.new(OID.new(oid))) }
       pdu.setType(PDU::GET)
 
@@ -71,9 +71,10 @@ module LogStash
     end
 
 
-    def walk(oid, strip_root = 0)
+    def walk(oid, strip_root = 0, *pdufactory)
       result = {}
-      treeUtils = TreeUtils.new(@snmp, DefaultPDUFactory.new)
+      pdufactory = pdufactory || DefaultPDUFactory.new
+      treeUtils = TreeUtils.new(@snmp, pdufactory)
       events = treeUtils.getSubtree(@target, OID.new(oid))
       return nil if events.nil? || events.size == 0
 
