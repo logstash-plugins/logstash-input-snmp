@@ -3,6 +3,7 @@ require "logstash-input-snmp_jars.rb"
 
 java_import "org.snmp4j.CommunityTarget"
 java_import "org.snmp4j.PDU"
+java_import "org.snmp4j.ScopedPDU"
 java_import "org.snmp4j.Snmp"
 java_import "org.snmp4j.Target"
 java_import "org.snmp4j.TransportMapping"
@@ -43,11 +44,11 @@ module LogStash
     end
 
     def get(oids, strip_root = 0)
-      pdu = PDU.new
-      Array(oids).each { |oid| pdu.add(VariableBinding.new(OID.new(oid))) }
-      pdu.setType(PDU::GET)
+      @pdu = PDU.new if @pdu.nil?
+      Array(oids).each { |oid| @pdu.add(VariableBinding.new(OID.new(oid))) }
+      @pdu.setType(PDU::GET)
 
-      response_event = @snmp.send(pdu, @target, nil)
+      response_event = @snmp.send(@pdu, @target, nil)
       return nil if response_event.nil?
 
       e = response_event.getError
@@ -73,7 +74,8 @@ module LogStash
 
     def walk(oid, strip_root = 0)
       result = {}
-      treeUtils = TreeUtils.new(@snmp, DefaultPDUFactory.new)
+      @pdufactory = DefaultPDUFactory.new if @pdufactory.nil?
+      treeUtils = TreeUtils.new(@snmp, @pdufactory)
       events = treeUtils.getSubtree(@target, OID.new(oid))
       return nil if events.nil? || events.size == 0
 
