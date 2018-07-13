@@ -4,6 +4,7 @@ require "logstash/namespace"
 require "stud/interval"
 require "socket" # for Socket.gethostname
 require_relative "snmp/client"
+require_relative "snmp/clientv3"
 require_relative "snmp/mib"
 
 # Generate a repeating message.
@@ -63,9 +64,16 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
   BASE_MIB_PATH = ::File.join(__FILE__, "..", "..", "..", "mibs")
   PROVIDED_MIB_PATHS = [::File.join(BASE_MIB_PATH, "logstash"), ::File.join(BASE_MIB_PATH, "ietf")].map { |path| ::File.expand_path(path) }
 
+  # SNMPv3 Credentials
+  # Putting these in their own array section so that hosts can be defined in the same syntax for v1/2c/3
+  # Community string for v3 will refer to a username defined in this section. If user doesn't exist, raise an error
+  #
+  config :v3_users, :validate => :array #[ {"name" => "ciscov3", "auth_protocol" => "sha", "auth_pass" => "myshapass", "priv_protocol" => "aes", "priv_pass" => "myprivpass" "auth_level" => "authNoPriv"} ]
+
   def register
     validate_oids!
     validate_hosts!
+    validate_v3_users!
 
     # setup MIBs loading
 
@@ -104,16 +112,30 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
       address = host_details[:host_address]
       port = host_details[:host_port]
 
-      definition = {
-        :client => LogStash::SnmpClient.new(protocol, address, port, community, version, retries, timeout, mib),
-        :get => Array(get),
-        :walk => Array(walk),
 
-        :host_protocol => protocol,
-        :host_address => address,
-        :host_port => port,
-        :host_community => community,
-      }
+      if version == "3"
+        definition = {
+	  :client => LogStash::SnmpClientV3.new(protocol, address, port, get_v3_details(community), retries, timeout, mib),
+          :get => Array(get),
+          :walk => Array(walk),
+
+          :host_protocol => protocol,
+          :host_address => address,
+          :host_port => port,
+          :host_community => community,
+        }
+      else
+        definition = {
+          :client => LogStash::SnmpClient.new(protocol, address, port, community, version, retries, timeout, mib),
+          :get => Array(get),
+          :walk => Array(walk),
+
+          :host_protocol => protocol,
+          :host_address => address,
+          :host_port => port,
+          :host_community => community,
+        }
+      end
       @client_definitions << definition
     end
   end
@@ -128,7 +150,7 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
           begin
             result = result.merge(definition[:client].get(definition[:get], @oid_root_skip))
           rescue => e
-            logger.error("error invoking get operation on OIDs: #{definition[:get]}, ignoring", :exception => e, :backtrace => e.backtrace)
+            logger.error("error invoking get operation on #{definition[:host_address]} for OIDs: #{definition[:get]}, ignoring", :exception => e, :backtrace => e.backtrace)
           end
         end
         if  !definition[:walk].empty?
@@ -167,7 +189,21 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
 
   OID_REGEX = /^\.?([0-9\.]+)$/
   HOST_REGEX = /^(?<host_protocol>udp|tcp):(?<host_address>.+)\/(?<host_port>\d+)$/i
-  VERSION_REGEX =/^1|2c$/
+  VERSION_REGEX =/^1|2c|3$/
+
+  def get_v3_details(user)
+    raise(LogStash::ConfigurationError, "v3 host specified but no v3 users defined") if Array(@v3_users).empty?
+
+    @v3_users.each do |v3_user|
+      if v3_user["name"] == user
+        return v3_user
+      end
+    end
+    raise(LogStash::ConfigurationError, "v3 user '#{user}' not defined in v3_users")
+    return nil
+  end
+
+
 
   def validate_oids!
     @get = Array(@get).map do |oid|
@@ -187,6 +223,23 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
     end
 
     raise(LogStash::ConfigurationError, "at least one get OID or one walk OID is required") if @get.empty? && @walk.empty?
+  end
+
+  def validate_v3_users!
+    @ok_auth = ["md5", "sha", "sha2", "hmac128sha224", "hmac192sha256", "hmac256sha384", "hmac384sha512"]
+    @ok_priv = ["des", "3des", "aes", "aes128", "aes192", "aes256"]
+    if !Array(@v3_users).empty?
+      @v3_users.each do |v3_user|
+        raise(LogStash::ConfigurationError, "each v3 users must have a \"name\" option") if !v3_user.is_a?(Hash) || v3_user["name"].nil?
+        raise(LogStash::ConfigurationError, "you must specify an auth protocol if you specify an auth pass") if  v3_user["auth_protocol"].nil? && !v3_user["auth_pass"].nil?
+        raise(LogStash::ConfigurationError, "you must specify an auth pass if you specify an auth protocol") if !v3_user["auth_protocol"].nil? &&  v3_user["auth_pass"].nil?
+        raise(LogStash::ConfigurationError, "you must specify a priv protocol if you specify a priv pass")   if  v3_user["priv_protocol"].nil? && !v3_user["priv_pass"].nil?
+        raise(LogStash::ConfigurationError, "you must specify a priv pass if you specify a priv protocol")   if !v3_user["priv_protocol"].nil? &&  v3_user["priv_pass"].nil?
+	raise(LogStash::ConfigurationError, "unsupported auth protocol") if v3_user["auth_protocol"] && !@ok_auth.include?(v3_user["auth_protocol"].to_s.downcase)
+	raise(LogStash::ConfigurationError, "unsupported priv protocol") if v3_user["priv_protocol"] && !@ok_priv.include?(v3_user["priv_protocol"].to_s.downcase)
+	### Add some more validation tests here
+      end
+    end
   end
 
   def validate_hosts!
