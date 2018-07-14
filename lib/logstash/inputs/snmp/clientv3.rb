@@ -62,7 +62,7 @@ module LogStash
         sec_priv_pass = OctetString.new(v3_details["priv_pass"])
       end
       @snmp = Snmp.new(transport)
-      usm = USM.new(SecurityProtocols.instance, OctetString.new(MPv3.create_local_engine_id), 0)
+      usm = USM.new(SecurityProtocols.getInstance, OctetString.new(MPv3.createLocalEngineID), 0)
       SecurityModels.getInstance.addSecurityModel(usm)
       transport.listen
       @snmp.getUSM.addUser UsmUser.new(sec_name, sec_auth_proto, sec_auth_pass, sec_priv_proto, sec_priv_pass)
@@ -80,17 +80,6 @@ module LogStash
       target.setTimeout(timeout)
       target.setVersion(SnmpConstants.version3)
       target
-    end
-
-    def get(oids, strip_root = 0)
-      pdu = ScopedPDU.new
-      pdu.context_name = OctetString.new('')
-      super(oids, strip_root, pdu)
-    end
-
-    def walk(oid, strip_root = 0)
-      pdufactory = DefaultPDUFactory.new(PDU::GETBULK)
-      super(oids, strip_root, pdufactory)
     end
 
     def parse_priv_proto(privp)
@@ -114,6 +103,16 @@ module LogStash
       return oidPrivP
     end
 
+    def get(oids, strip_root = 0)
+      @pdu = ScopedPDU.new
+      @pdu.context_name = OctetString.new('')
+      super
+    end
+    
+    def walk(oids, strip_root = 0)
+      @pdufactory = DefaultPDUFactory.new(PDU::GETBULK)
+      super
+    end
 
     def parse_auth_proto(authp)
       return nil if authp.nil?
