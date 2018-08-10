@@ -135,19 +135,5 @@ module LogStash
           raise(SnmpClientV3Error, "authentication protocol '#{authp}' is not supported, expected protocols are 'md5', 'sha', and 'sha2'")
       end
     end
-
-    def parse_auth_level(authl)
-      return 1 if authl.nil?
-      case authl.to_s.downcase
-        when 'noauthnopriv'
-	  1
-        when 'authnopriv'
-	  2
-        when 'authpriv'
-          3
-        else
-          1
-      end
-    end      
   end
 end
