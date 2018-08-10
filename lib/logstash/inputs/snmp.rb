@@ -112,10 +112,9 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
       address = host_details[:host_address]
       port = host_details[:host_port]
 
-
       if version == "3"
         definition = {
-	  :client => LogStash::SnmpClientV3.new(protocol, address, port, get_v3_details(community), retries, timeout, mib),
+          :client => LogStash::SnmpClientV3.new(protocol, address, port, get_v3_details(community), retries, timeout, mib),
           :get => Array(get),
           :walk => Array(walk),
 
@@ -235,8 +234,8 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
         raise(LogStash::ConfigurationError, "you must specify an auth pass if you specify an auth protocol") if !v3_user["auth_protocol"].nil? &&  v3_user["auth_pass"].nil?
         raise(LogStash::ConfigurationError, "you must specify a priv protocol if you specify a priv pass")   if  v3_user["priv_protocol"].nil? && !v3_user["priv_pass"].nil?
         raise(LogStash::ConfigurationError, "you must specify a priv pass if you specify a priv protocol")   if !v3_user["priv_protocol"].nil? &&  v3_user["priv_pass"].nil?
-	raise(LogStash::ConfigurationError, "unsupported auth protocol") if v3_user["auth_protocol"] && !@ok_auth.include?(v3_user["auth_protocol"].to_s.downcase)
-	raise(LogStash::ConfigurationError, "unsupported priv protocol") if v3_user["priv_protocol"] && !@ok_priv.include?(v3_user["priv_protocol"].to_s.downcase)
+        raise(LogStash::ConfigurationError, "unsupported auth protocol") if v3_user["auth_protocol"] && !@ok_auth.include?(v3_user["auth_protocol"].to_s.downcase)
+        raise(LogStash::ConfigurationError, "unsupported priv protocol") if v3_user["priv_protocol"] && !@ok_priv.include?(v3_user["priv_protocol"].to_s.downcase)
 	### Add some more validation tests here
       end
     end
