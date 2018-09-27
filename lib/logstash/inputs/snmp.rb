@@ -31,6 +31,10 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
   #  `timeout` in milliseconds with a default value of `1000`
   config :hosts, :validate => :array  #[ {"host" => "udp:127.0.0.1/161", "community" => "public"} ]
 
+  # This plugin provides sets of MIBs publicly available. The full paths to these provided MIBs paths
+  # Will be displayed at plugin startup.
+  config :use_provided_mibs, :validate => :boolean, :default => true
+
   # List of paths of MIB .dic files of dirs. If a dir path is specified, all files with .dic extension will be loaded.
   #
   # ATTENTION: a MIB .dic file must be generated using the libsmi library `smidump` command line utility
@@ -56,15 +60,30 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
   # Add the default "host" field to the event.
   config :add_field, :validate => :hash, :default => { "host" => "%{[@metadata][host_address]}" }
 
+  BASE_MIB_PATH = ::File.join(__FILE__, "..", "..", "..", "mibs")
+  PROVIDED_MIB_PATHS = [::File.join(BASE_MIB_PATH, "logstash"), ::File.join(BASE_MIB_PATH, "ietf")].map { |path| ::File.expand_path(path) }
+
   def register
     validate_oids!
     validate_hosts!
 
+    # setup MIBs loading
+
     mib = LogStash::SnmpMib.new
+
+    if @use_provided_mibs
+      PROVIDED_MIB_PATHS.each do |path|
+        logger.info("using plugin provided MIB path #{path}")
+        mib.add_mib_path(path)
+      end
+    end
+
     Array(@mib_paths).each do |path|
-      # TODO handle errors
+      logger.info("using user provided MIB path #{path}")
       mib.add_mib_path(path)
     end
+
+    # setup client definitions per provided host
 
     @client_definitions = []
     @hosts.each do |host|

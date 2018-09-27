@@ -17,30 +17,23 @@ module LogStash
     end
 
     it "should produce 0 warning when first adding a mib path" do
-      warnings = subject.add_mib_path(rfc1213_mib)
-      expect(warnings.size).to eq(0)
+      expect_any_instance_of(SnmpMib::Tree).to receive(:logger).never.and_call_original
+      subject.add_mib_path(rfc1213_mib)
     end
 
     it "should produce 0 warning when adding same keys and values" do
-      warnings = subject.add_mib_path(rfc1213_mib)
-      expect(warnings.size).to eq(0)
-      warnings = subject.add_mib_path(rfc1213_mib)
-      expect(warnings.size).to eq(0)
+      expect_any_instance_of(SnmpMib::Tree).to receive(:logger).never.and_call_original
+
+      subject.add_mib_path(rfc1213_mib)
+      subject.add_mib_path(rfc1213_mib)
     end
 
     it "should produce warning when adding mib with collisions" do
-      warnings = subject.add_mib_path(rfc1213_mib)
-      expect(warnings.size).to eq(0)
-      warnings = subject.add_mib_path(collision_mib)
-      expect(warnings.size).to eq(1)
-      expect(warnings[0]).to eq("warning: overwriting MIB OID '1.3.6.1.2.1.1' and name 'system' with new name 'foo' from module 'RFC1213-MIB'")
+      expect_any_instance_of(SnmpMib::Tree).to receive(:logger).exactly(1).times.and_call_original
+      subject.add_mib_path(rfc1213_mib)
+      subject.add_mib_path(collision_mib)
     end
-
-    it "should read all dic files in the dir" do
-      warnings = subject.add_mib_path(fixtures_dir)
-      expect(warnings.size).to eq(1) # since we have 2 fixtures that produce 1 collision
-    end
-
+    
     it "should find existing oid" do
       subject.add_mib_path(rfc1213_mib)
       expect(subject.map_oid("1.3.6.1.2.1.1")).to eq("1.3.6.1.2.mib-2.system")

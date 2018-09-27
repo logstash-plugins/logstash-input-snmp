@@ -1,10 +1,14 @@
 # encoding: utf-8
 
+require "logstash/util/loggable"
+
 module LogStash
   class SnmpMibError < StandardError
   end
 
   class SnmpMib
+    include LogStash::Util::Loggable
+
     attr_reader :tree
 
     class Oid
@@ -14,7 +18,7 @@ module LogStash
     end
 
     class BaseNode
-      attr_reader :name, :childs
+      attr_accessor :name, :childs
 
       def initialize(name)
         @name = name
@@ -35,12 +39,13 @@ module LogStash
     end
 
     class Tree
+      include LogStash::Util::Loggable
+
       def initialize
         @root = BaseNode.new("root")
       end
 
       def add_node(node)
-        warnings = []
         current = @root
         path = node.oid_path.dup
 
@@ -55,11 +60,13 @@ module LogStash
         end
 
         if current.childs[last_node] && current.childs[last_node].name != node.name
-          warnings << "warning: overwriting MIB OID '#{node.oid}' and name '#{current.childs[last_node].name}' with new name '#{node.name}' from module '#{node.module_name}'"
-        end
-        current.childs[last_node] = node
+          logger.debug("warning: overwriting MIB OID '#{node.oid}' and name '#{current.childs[last_node].name}' with new name '#{node.name}' from module '#{node.module_name}'")
+         end
 
-        warnings
+        # preserve previous childs if replacing a node
+        node.childs = current.childs[last_node].childs.dup if current.childs[last_node]
+
+        current.childs[last_node] = node
       end
 
       def map_oid(oid, strip_root = 0)
@@ -101,16 +108,12 @@ module LogStash
         raise(SnmpMibError, "file or directory path expected: #{path.to_s}")
       end
 
-      warnings = []
       dic_files.each do |f|
         module_name, nodes = read_mib_dic(f)
-
         nodes.each do |k, v|
-          warnings += @tree.add_node(Node.new(v["nodetype"], k, v["moduleName"], v["oid"]))
+          @tree.add_node(Node.new(v["nodetype"], k, v["moduleName"], v["oid"]))
         end
       end
-
-      warnings
     end
 
     # read and parse a mib dic file
@@ -119,18 +122,16 @@ module LogStash
     # @return [[String, Hash, Hash, Hash]] the 2-tuple of the mib module name and the complete nodes
     def read_mib_dic(filename)
       mib = eval_mib_dic(filename)
+
       raise(SnmpMibError, "invalid mib dic format for file #{filename}") unless mib
       module_name = mib["moduleName"]
-      raise(SnmpMibError, "invalid mib dic format for file #{filename}") unless module_name
-      nodes = mib["nodes"]
-      raise(SnmpMibError, "no nodes defined in mib dic file #{filename}") unless nodes
 
-      # name_hash is { mib-name => oid }
-      # name_hash = {}
-      # nodes.each { |k, v| name_hash[k] = v["oid"] }
-      # if mib["notifications"]
-      #   mib["notifications"].each { |k, v| name_hash[k] = v["oid"] }
-      # end
+      raise(SnmpMibError, "invalid mib dic format for file #{filename}") unless module_name
+      nodes = mib["nodes"] || []
+
+      if nodes.empty?
+        logger.warn("no nodes defined in mib dic file #{filename}")
+      end
 
       [module_name, nodes]
     end
@@ -152,7 +153,8 @@ module LogStash
       mib = nil
       eval(mib_hash)
       mib
-    rescue => e
+    rescue Exception => e
+      # rescuing Exception class is important here to rescue SyntaxError from eval
       raise(SnmpMibError, "error parsing mib dic file: #{filename}, error: #{e.message}")
     end
   end
