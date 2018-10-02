@@ -1,6 +1,3 @@
-## 0.1.0.beta5
-  - feature: Added support for SNMPv3
-
 ## 0.1.0.beta4
   - Fixed missing coercions [#12](https://github.com/logstash-plugins/logstash-input-snmp/pull/12)
 
