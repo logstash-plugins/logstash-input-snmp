@@ -27,8 +27,8 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
   #  for example `host => "udp:127.0.0.1/161"`
   # Each host definition can optionally include the following keys and values:
   #  `community` with a default value of `public`
-  #  `version` `1` or `2c` with a default value of `2c`
-  #  `retries` with a detault value of `2`
+  #  `version` `1`, `2c` or `3` with a default value of `2c`
+  #  `retries` with a default value of `2`
   #  `timeout` in milliseconds with a default value of `1000`
   config :hosts, :validate => :array  #[ {"host" => "udp:127.0.0.1/161", "community" => "public"} ]
 
@@ -55,14 +55,11 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
 
   # Set polling interval in seconds
   #
-  # The default, `30`, means poll each host every 30second.
+  # The default, `30`, means poll each host every 30 seconds.
   config :interval, :validate => :number, :default => 30
 
   # Add the default "host" field to the event.
   config :add_field, :validate => :hash, :default => { "host" => "%{[@metadata][host_address]}" }
-
-  BASE_MIB_PATH = ::File.join(__FILE__, "..", "..", "..", "mibs")
-  PROVIDED_MIB_PATHS = [::File.join(BASE_MIB_PATH, "logstash"), ::File.join(BASE_MIB_PATH, "ietf")].map { |path| ::File.expand_path(path) }
 
   # SNMPv3 Credentials
   #
@@ -88,6 +85,8 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
   # The SNMPv3 security level can be Authentication, No Privacy; Authentication, Privacy; or no Authentication, no Privacy
   config :security_level, :validate => ["noAuthNoPriv", "authNoPriv", "authPriv"]
 
+  BASE_MIB_PATH = ::File.join(__FILE__, "..", "..", "..", "mibs")
+  PROVIDED_MIB_PATHS = [::File.join(BASE_MIB_PATH, "logstash"), ::File.join(BASE_MIB_PATH, "ietf")].map { |path| ::File.expand_path(path) }
 
   def register
     validate_oids!
@@ -142,7 +141,7 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
         validate_v3_user! # don't really care if verified for every host
         auth_pass = @auth_pass.nil? ? nil : @auth_pass.value
         priv_pass = @priv_pass.nil? ? nil : @priv_pass.value
-        definition[:client] = LogStash::SnmpClientV3.new(protocol, address, port, retries, timeout, mib, @security_name, @aut_protocol, auth_pass, @priv_protocol, priv_pass, @security_level)
+        definition[:client] = LogStash::SnmpClientV3.new(protocol, address, port, retries, timeout, mib, @security_name, @auth_protocol, auth_pass, @priv_protocol, priv_pass, @security_level)
       else
         definition[:client] = LogStash::SnmpClient.new(protocol, address, port, community, version, retries, timeout, mib)
       end
