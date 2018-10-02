@@ -26,6 +26,7 @@ java_import 'org.snmp4j.security.SecurityModels'
 java_import 'org.snmp4j.security.SecurityProtocols'
 java_import 'org.snmp4j.security.USM'
 java_import 'org.snmp4j.security.UsmUser'
+java_import 'org.snmp4j.security.SecurityLevel'
 java_import 'org.snmp4j.smi.Address'
 java_import 'org.snmp4j.smi.GenericAddress'
 java_import 'org.snmp4j.smi.OID'
@@ -36,42 +37,28 @@ java_import 'org.snmp4j.UserTarget'
 java_import 'org.snmp4j.util.DefaultPDUFactory'
 
 module LogStash
-  class SnmpClientV3Error < SnmpClientError
-  end
+  class SnmpClientV3 < BaseSnmpClient
 
-  class SnmpClientV3 < SnmpClient
+    def initialize(protocol, address, port, retries, timeout, mib, security_name, auth_protocol, auth_pass, priv_protocol, priv_pass, security_level)
+      super(protocol, address, port, retries, timeout, mib)
 
-    def initialize(protocol, address, port, v3_details, retries, timeout, mib)
-      transport = case protocol.to_s
-        when 'udp'
-          DefaultUdpTransportMapping.new
-        when 'tcp'
-          DefaultTcpTransportMapping.new
-        else
-          raise(SnmpClientV3Error, "invalid transport protocol specified '#{protocol.to_s}', expecting 'udp' or 'tcp'")
-      end
+      security_level = parse_security_level(security_level)
+      security_name = OctetString.new(security_name)
+      auth_protocol = parse_auth_protocol(auth_protocol)
+      priv_protocol = parse_priv_protocol(priv_protocol)
+      auth_pass = auth_pass.nil? ? nil : OctetString.new(auth_pass)
+      priv_pass = priv_pass.nil? ? nil : OctetString.new(priv_pass)
 
-      sec_level = parse_auth_level(v3_details["auth_level"])
-      sec_name = OctetString.new(v3_details["name"])
-      sec_auth_proto = parse_auth_proto(v3_details["auth_protocol"])
-      sec_priv_proto = parse_priv_proto(v3_details["priv_protocol"])
-      if !v3_details["auth_pass"].nil?
-        sec_auth_pass = OctetString.new(v3_details["auth_pass"])
-      end
-      if !v3_details["priv_pass"].nil?
-        sec_priv_pass = OctetString.new(v3_details["priv_pass"])
-      end
-      @snmp = Snmp.new(transport)
       usm = USM.new(SecurityProtocols.getInstance, OctetString.new(MPv3.createLocalEngineID), 0)
       SecurityModels.getInstance.addSecurityModel(usm)
-      transport.listen
-      @snmp.getUSM.addUser UsmUser.new(sec_name, sec_auth_proto, sec_auth_pass, sec_priv_proto, sec_priv_pass)
-      @target = build_v3_target("#{protocol}:#{address}/#{port}", sec_name, sec_level, retries, timeout)
-      @mib = mib
 
+      @snmp.getUSM.addUser(UsmUser.new(security_name, auth_protocol, auth_pass, priv_protocol, priv_pass))
+      @target = build_target("#{protocol}:#{address}/#{port}", security_name, security_level, retries, timeout)
     end
 
-    def build_v3_target(address, name, seclevel, retries, timeout)
+    private
+
+    def build_target(address, name, seclevel, retries, timeout)
       target = UserTarget.new
       target.setSecurityLevel(seclevel)
       target.setSecurityName(name)
@@ -82,41 +69,41 @@ module LogStash
       target
     end
 
-    def parse_priv_proto(privp)
-      return nil if privp.nil?
-      oidPrivP = case privp.to_s.downcase
-      when "des"
-        OID.new("1.3.6.1.6.3.10.1.2.2")
-      when "3des"
-        OID.new("1.3.6.1.6.3.10.1.2.3")
-      when "aes"
-        OID.new("1.3.6.1.6.3.10.1.2.4")
-      when "aes128"
-        OID.new("1.3.6.1.6.3.10.1.2.4")
-      when "aes192"
-        OID.new("1.3.6.1.6.3.10.1.2.5")
-      when "aes256"
-        OID.new("1.3.6.1.6.3.10.1.2.6")
-      else
-        raise(SnmpClientError, "privacy protocol '#{privp}' is not supported, expected protocols are 'des', '3des', 'aes', 'aes128', 'aes192', and 'aes256'")
+    def get_pdu
+      pdu = ScopedPDU.new
+      pdu.setType(PDU::GET)
+      pdu
+    end
+
+    def get_pdu_factory
+      DefaultPDUFactory.new(PDU::GET)
+    end
+
+    def parse_priv_protocol(priv_protocol)
+      return nil if priv_protocol.nil?
+
+      case priv_protocol.to_s.downcase
+        when "des"
+          SnmpConstants::usmDESPrivProtocol
+        when "3des"
+          SnmpConstants::usm3DESEDEPrivProtocol
+        when "aes"
+          SnmpConstants::usmAesCfb128Protocol
+        when "aes128"
+          SnmpConstants::usmAesCfb128Protocol
+        when "aes192"
+          SnmpConstants::oosnmpUsmAesCfb192Protocol
+        when "aes256"
+          SnmpConstants::oosnmpUsmAesCfb256Protocol
+        else
+         raise(SnmpClientError, "privacy protocol '#{priv_protocol}' is not supported, expected protocols are 'des', '3des', 'aes', 'aes128', 'aes192', and 'aes256'")
       end
-      return oidPrivP
     end
 
-    def get(oids, strip_root = 0)
-      @pdu = ScopedPDU.new
-      @pdu.context_name = OctetString.new('')
-      super
-    end
-    
-    def walk(oids, strip_root = 0)
-      @pdufactory = DefaultPDUFactory.new(PDU::GETBULK)
-      super
-    end
+    def parse_auth_protocol(auth_protocol)
+      return nil if auth_protocol.nil?
 
-    def parse_auth_proto(authp)
-      return nil if authp.nil?
-      case authp.to_s.downcase
+      case auth_protocol.to_s.downcase
         when 'md5'
           AuthMD5::ID
         when 'sha'
@@ -132,21 +119,20 @@ module LogStash
         when 'hmac384sha512'
           AuthHMAC384SHA512::ID
         else
-          raise(SnmpClientV3Error, "authentication protocol '#{authp}' is not supported, expected protocols are 'md5', 'sha', and 'sha2'")
+          raise(SnmpClientError, "authentication protocol '#{auth_protocol}' is not supported, expected protocols are 'md5', 'sha', and 'sha2'")
       end
     end
 
-    def parse_auth_level(authl)
-      return 1 if authl.nil?
-      case authl.to_s.downcase
+    def parse_security_level(security_level)
+      case security_level.to_s.downcase
         when 'noauthnopriv'
-	  1
+	        SecurityLevel::NOAUTH_NOPRIV
         when 'authnopriv'
-	  2
+	        SecurityLevel::AUTH_NOPRIV
         when 'authpriv'
-          3
+          SecurityLevel::AUTH_PRIV
         else
-          1
+          SecurityLevel::NOAUTH_NOPRIV
       end
     end
   end
