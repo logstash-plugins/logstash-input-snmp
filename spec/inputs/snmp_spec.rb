@@ -58,7 +58,7 @@ describe LogStash::Inputs::Snmp do
           {"get" => ["1.0"], "hosts" => [{"host" => "tcp:127.0.0.1/161", "community" => "public"}]},
           {"get" => ["1.0"], "hosts" => [{"host" => "udp:127.0.0.1/161", "version" => "1"}]},
           {"get" => ["1.0"], "hosts" => [{"host" => "udp:127.0.0.1/161", "version" => "2c"}]},
-          {"get" => ["1.0"], "hosts" => [{"host" => "udp:127.0.0.1/161", "community" => "v3user", "version" => "3"}], "v3_users" => [{"name" => "v3user"}]},
+          {"get" => ["1.0"], "hosts" => [{"host" => "udp:127.0.0.1/161", "version" => "3"}], "security_name" => "v3user"},
       ]
     }
 
@@ -93,15 +93,15 @@ describe LogStash::Inputs::Snmp do
   context "v3_users options validation" do
     let(:valid_configs) {
       [
-	  {"get" => ["1.0"], "hosts" => [{"host" => "udp:127.0.0.1/161"}], "v3_users" => [{"name" => "ciscov3", "auth_protocol" => "sha", "auth_pass" => "myshapass", "priv_protocol" => "aes", "priv_pass" => "myprivpass", "auth_level" => "authNoPriv"}]},
-	  {"get" => ["1.0"], "hosts" => [{"host" => "udp:127.0.0.1/161"}], "v3_users" => [{"name" => "dellv3", "auth_protocol" => "md5", "auth_pass" => "myshapass", "priv_protocol" => "3des", "priv_pass" => "myprivpass", "auth_level" => "authNoPriv"}]}
+	  {"get" => ["1.0"], "hosts" => [{"host" => "udp:127.0.0.1/161", "version" => "3"}], "security_name" => "ciscov3", "auth_protocol" => "sha", "auth_pass" => "myshapass", "priv_protocol" => "aes", "priv_pass" => "myprivpass", "security_level" => "authNoPriv"},
+	  {"get" => ["1.0"], "hosts" => [{"host" => "udp:127.0.0.1/161", "version" => "3"}], "security_name" => "dellv3", "auth_protocol" => "md5", "auth_pass" => "myshapass", "priv_protocol" => "3des", "priv_pass" => "myprivpass", "security_level" => "authNoPriv"}
       ]
     }
 
     let(:invalid_configs) {
       [
-	  {"get" => ["1.0"], "hosts" => [{"host" => "udp:127.0.0.1/161"}], "v3_users" => [{"name" => "ciscov3", "auth_protocol" => "badauth", "auth_pass" => "myshapass", "priv_protocol" => "aes", "priv_pass" => "myprivpass", "auth_level" => "authNoPriv"}]},
-	  {"get" => ["1.0"], "hosts" => [{"host" => "udp:127.0.0.1/161"}], "v3_users" => [{"name" => "ciscov3", "auth_protocol" => "sha"}]}
+	  {"get" => ["1.0"], "hosts" => [{"host" => "udp:127.0.0.1/161", "version" => "3"}], "security_name" => "ciscov3", "auth_protocol" => "badauth", "auth_pass" => "myshapass", "priv_protocol" => "aes", "priv_pass" => "myprivpass", "security_level" => "authNoPriv"},
+	  {"get" => ["1.0"], "hosts" => [{"host" => "udp:127.0.0.1/161", "version" => "3"}], "security_name" => "ciscov3", "auth_protocol" => "sha"}
       ]
     }
 
