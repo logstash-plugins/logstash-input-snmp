@@ -122,6 +122,8 @@ module LogStash
           variable.toString
         when BER::NULL
           NULL_STRING
+        when BER::OPAQUE
+          variable.toString
         when BER::NOSUCHOBJECT
           "Error: No Such Instance currently exists at this OID"
         else
