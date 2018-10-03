@@ -1,3 +1,8 @@
+## 0.1.0.beta5
+  - Added OPAQUE type coercion [#29](https://github.com/logstash-plugins/logstash-input-snmp/pull/29)
+  - Added SNMPv3 support [#27](https://github.com/logstash-plugins/logstash-input-snmp/pull/27)
+  - Added support for provided MIBs [#25](https://github.com/logstash-plugins/logstash-input-snmp/pull/25)
+
 ## 0.1.0.beta4
   - Fixed missing coercions [#12](https://github.com/logstash-plugins/logstash-input-snmp/pull/12)
 
