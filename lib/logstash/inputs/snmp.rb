@@ -221,11 +221,15 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
   end
 
   def validate_v3_user!
-    raise(LogStash::ConfigurationError, "v3 user must have a \"security_name\" option") if @security_name.nil?
-    raise(LogStash::ConfigurationError, "you must specify an auth protocol if you specify an auth pass") if  @auth_protocol.nil? && !@auth_pass.nil?
-    raise(LogStash::ConfigurationError, "you must specify an auth pass if you specify an auth protocol") if !@auth_protocol.nil? &&  @auth_pass.nil?
-    raise(LogStash::ConfigurationError, "you must specify a priv protocol if you specify a priv pass")   if  @priv_protocol.nil? && !@priv_pass.nil?
-    raise(LogStash::ConfigurationError, "you must specify a priv pass if you specify a priv protocol")   if !@priv_protocol.nil? &&  @priv_pass.nil?
+    errors = []
+
+    errors << "v3 user must have a \"security_name\" option" if @security_name.nil?
+    errors << "you must specify an auth protocol if you specify an auth pass" if @auth_protocol.nil? && !@auth_pass.nil?
+    errors << "you must specify an auth pass if you specify an auth protocol" if !@auth_protocol.nil? && @auth_pass.nil?
+    errors << "you must specify a priv protocol if you specify a priv pass" if @priv_protocol.nil? && !@priv_pass.nil?
+    errors << "you must specify a priv pass if you specify a priv protocol" if !@priv_protocol.nil? &&  @priv_pass.nil?
+
+    raise(LogStash::ConfigurationError, errors.join(", ")) unless errors.empty?
    end
 
 
