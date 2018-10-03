@@ -1,0 +1,248 @@
+:plugin: snmp
+:type: input
+:default_codec: plain
+
+// TO DO:  VERIFY default codec!
+
+///////////////////////////////////////////
+START - GENERATED VARIABLES, DO NOT EDIT!
+///////////////////////////////////////////
+:version: %VERSION%
+:release_date: %RELEASE_DATE%
+:changelog_url: %CHANGELOG_URL%
+:include_path: ../../../../logstash/docs/include
+///////////////////////////////////////////
+END - GENERATED VARIABLES, DO NOT EDIT!
+///////////////////////////////////////////
+
+[id="plugins-{type}s-{plugin}"]
+
+=== SNMP input plugin
+
+include::{include_path}/plugin_header.asciidoc[]
+
+==== Description
+
+The SNMP input polls network devices using Simple Network Management Protocol (SNMP)
+to gather information such as performance, up time, and what else?
+
+[id="plugins-{type}s-{plugin}-import-mibs"]
+==== Importing MIBs 
+
+This plugin includes management information bases (MIBs) for most use cases. 
+If you use custom MIBs, you need to import them.
+
+TIP: Before you import MIBs, check to see if they are already included with this plugin.
+
+TODO: Include info on importing MIBs
+
+Convert Standard ASN.1 MIB files using the libsmi library `smidump`
+command line utility for use with the plugin. 
+
+Example (using `RFC1213-MIB.txt` file) 
+
+[source,ruby]
+-----
+$ smidump -k -f python RFC1213-MIB.txt > RFC1213-MIB.dic
+-----
+
+The OSS https://www.ibr.cs.tu-bs.de/projects/libsmi/[libsmi library] is
+available and installable on most operating systems.
+
+
+[id="plugins-{type}s-{plugin}-options"]
+==== SNMP Input Configuration Options
+
+This plugin supports the following configuration options plus the <<plugins-{type}s-{plugin}-common-options>> described later.
+
+[cols="<,<,<",options="header",]
+|=======================================================================
+|Setting |Input type|Required
+| <<plugins-{type}s-{plugin}-get>> |<<string,string>>|No
+| <<plugins-{type}s-{plugin}-hosts>> |<<array,array>>|No
+| <<plugins-{type}s-{plugin}-interval>> |<<number,number>>|No
+| <<plugins-{type}s-{plugin}-mib_paths>> |<<path,path>>|No
+| <<plugins-{type}s-{plugin}-oid_root_skip>> |<<boolean,boolean>>|No
+|=======================================================================
+
+Also see <<plugins-{type}s-{plugin}-common-options>> for a list of options supported by all
+input plugins.
+
+
+[id="plugins-{type}s-{plugin}-get"]
+===== `get` 
+
+ToDO: Update description and values with correct info
+
+* Value type is <<array,array>>
+* There is no default value for this setting
+
+Example
+[source,ruby]
+-----
+input {
+  snmp {
+    get => ["1.3.6.1.2.1.1.1.0", "1.3.6.1.2.1.1.3.0", "1.3.6.1.2.1.1.5.0"]
+    hosts => [{host => "udp:127.0.0.1/161" community => "public"}]
+  }
+}
+-----
+
+[id="plugins-{type}s-{plugin}-hosts"]
+===== `hosts`
+
+ToDO: Update description and values with correct info
+
+* Value type is <<array,array>>
+* There is no default value for this setting
+
+*Specifying all hosts options*
+
+[source,ruby]
+-----
+input {
+  snmp {
+    get => ["1.3.6.1.2.1.1.1.0"]
+    hosts => [{host => "udp:127.0.0.1/161" community => "public", version => "2c", retries => 2, timeout => 1000}]
+  }
+}
+-----
+
+* `community` the community string, default is `public`.
+* `version` only `2c` is supported for the moment.
+* `retries` is the number of retries in case of failure, default is `2`.
+* `timeout` is the timeout in milliseconds with a default value of `1000`.
+
+*Specifying multiple hosts*
+
+[source,ruby]
+-----
+input {
+  snmp {
+    get => ["1.3.6.1.2.1.1.1.0"]
+    hosts => [{host => "udp:127.0.0.1/161" community => "public"}, {host => "udp:192.168.0.1/161" community => "private"}]
+  }
+}
+-----
+
+[id="plugins-{type}s-{plugin}-interval"]
+===== `interval` 
+
+ToDO: Update description and values with correct info
+
+* Value type is <<number,number>>
+* Default value is `TBD`
+
+[id="plugins-{type}s-{plugin}-mib_paths"]
+===== `mib_paths` 
+
+ToDO: Update description and values with correct info
+
+* Value type is <<path,path>>
+* There is no default value for this setting
+
+The SNMP plugin includes management information bases (MIBs) for most use cases. 
+If you use custom MIBs, you need to import them. See <<plugins-{type}s-{plugin}-import-mibs>>.
+
+
+[id="plugins-{type}s-{plugin}-oid_root_skip"]
+===== `oid_root_skip` 
+
+ToDO: Update description and values with correct info
+
+* Value type is <<boolean,boolean>>
+* Default value is `0` (`false`)
+
+[id="plugins-{type}s-{plugin}-walk"]
+===== `walk` 
+
+ToDO: Update description and values with correct info
+
+* Value type is <<array,array>>
+* There is no default value for this setting
+
+Queries the subtree of information starting at the given OID(s).
+
+Example
+[source,ruby]
+-----
+  snmp {
+    walk => ["1.3.6.1.2.1.1"]
+    hosts => [{host => "udp:127.0.0.1/161" community => "public"}]
+  }
+}
+-----
+
+==== More configuration examples
+
+*Using both `get` and `walk` in the same poll cycle for each host(s)*
+
+[source,ruby]
+-----
+input {
+  snmp {
+    get => ["1.3.6.1.2.1.1.1.0", "1.3.6.1.2.1.1.3.0", "1.3.6.1.2.1.1.5.0"]
+    walk => ["1.3.6.1.2.1.1"]
+    hosts => [{host => "udp:127.0.0.1/161" community => "public"}]
+  }
+}
+-----
+
+*Specifying all global options* 
+
+[source,ruby]
+-----
+input {
+  snmp {
+    get => ["1.3.6.1.2.1.1.1.0"]
+    hosts => [{host => "udp:127.0.0.1/161"}]
+    
+    mib_paths => ["path/to/converted/mibfile.dic"]
+    oid_root_skip => 0
+    interval => 30
+  }
+}
+-----
+
+* `number of OID root digits to ignore in event field name.` list of paths of MIB .dic files or directory. If a dir path is specified, all files with .dic extension will be loaded. See `mib_paths` section.
+* `oid_root_skip` number of OID root digits to ignore in event field name, default is `0`. 
+* `interval` is the number of second to pause between each poll cycle, default is `30` seconds.
+
+
+==== Polled host information
+
+All the polled host information is stored in the event `@metadata`:
+
+* `[@metadata][host_protocol]` : `udp` or `tcp`
+* `[@metadata][host_address]` : host address for example `127.0.0.1`
+* `[@metadata][host_port]` : host port (for example `161`)
+* `[@metadata][host_community]` : community string for example `public`
+
+
+By default, a `host` field is added to the event with the `[@metadata][host_address]` value. 
+Use the `add_field` option. 
+
+[source,ruby]
+-----
+config :add_field, :validate => :hash, :default => { "host" => "%{[@metadata][host_address]}" }
+-----
+
+You can customize the format and content of the `host` field by specifying an alternate `add_field`. 
+
+Example
+[source,ruby]
+-----
+input {
+  snmp {
+    get => ["1.3.6.1.2.1.1.1.0"]
+    hosts => [{host => "udp:127.0.0.1/161"}]
+    
+    add_field => {host => "%{[@metadata][host_protocol]}:%{[@metadata][host_address]}/%{[@metadata][host_port]},%{[@metadata][host_community]}"}
+  }
+}
+-----
+
+[id="plugins-{type}s-{plugin}-common-options"]
+include::{include_path}/{type}.asciidoc[]
+
+:default_codec!:
