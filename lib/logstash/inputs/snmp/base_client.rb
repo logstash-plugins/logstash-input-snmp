@@ -1,6 +1,8 @@
 require "java"
 require "logstash-input-snmp_jars.rb"
 
+require "logstash/util/loggable"
+
 java_import "org.snmp4j.CommunityTarget"
 java_import "org.snmp4j.PDU"
 java_import "org.snmp4j.ScopedPDU"
@@ -25,6 +27,7 @@ module LogStash
   end
 
   class BaseSnmpClient
+    include LogStash::Util::Loggable
 
     def initialize(protocol, address, port, retries, timeout, mib)
       transport = case protocol.to_s
@@ -124,10 +127,12 @@ module LogStash
           NULL_STRING
         when BER::OPAQUE
           variable.toString
-        when BER::NOSUCHOBJECT
-          "Error: No Such Instance currently exists at this OID"
+        when BER::NOSUCHOBJECT, BER::NOSUCHINSTANCE
+          "error: no such instance currently exists at this OID"
         else
-          raise(SnmpClientError, "unknown variable syntax #{variable_syntax}, #{variable.getSyntaxString}")
+          msg = "error: unknown variable syntax #{variable_syntax}, #{variable.getSyntaxString}"
+          logger.error(msg)
+          msg
       end
     end
 
