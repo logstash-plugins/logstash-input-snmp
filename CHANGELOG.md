@@ -1,4 +1,4 @@
-## Next version
+## 1.0.0
   - Added improved syntax coercion [#32](https://github.com/logstash-plugins/logstash-input-snmp/pull/32)
 
 ## 0.1.0.beta5
