@@ -1,3 +1,6 @@
+## Next
+  - Changed docs to improve options layout [#38](https://github.com/logstash-plugins/logstash-input-snmp/pull/38)
+
 ## 1.0.0
   - Added improved syntax coercion [#32](https://github.com/logstash-plugins/logstash-input-snmp/pull/32)
 
