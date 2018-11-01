@@ -1,4 +1,5 @@
-## Next
+## 1.0.1
+  - Added no_codec condition to the documentation and bumped version [#39](https://github.com/logstash-plugins/logstash-input-snmp/pull/39)
   - Changed docs to improve options layout [#38](https://github.com/logstash-plugins/logstash-input-snmp/pull/38)
 
 ## 1.0.0
