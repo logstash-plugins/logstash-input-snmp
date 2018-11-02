@@ -24,6 +24,8 @@ include::{include_path}/plugin_header.asciidoc[]
 The SNMP input polls network devices using Simple Network Management Protocol (SNMP)
 to gather information related to the current state of the devices operation.
 
+The SNMP input plugin supports SNMP v1, v2c, and v3 over UDP and TCP transport protocols.
+
 [id="plugins-{type}s-{plugin}-import-mibs"]
 ==== Importing MIBs 
 
