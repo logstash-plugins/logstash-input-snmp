@@ -85,6 +85,10 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
   # The SNMPv3 security level can be Authentication, No Privacy; Authentication, Privacy; or no Authentication, no Privacy
   config :security_level, :validate => ["noAuthNoPriv", "authNoPriv", "authPriv"]
 
+  # Batch or single. HOw should metrics be provided
+  # some SNMP Walks are very large and it maybe disirable to split the metrics in to individule documents.
+  config :mode, :validate => ["single","batch"],:default => "batch"
+
   BASE_MIB_PATH = ::File.join(__FILE__, "..", "..", "..", "mibs")
   PROVIDED_MIB_PATHS = [::File.join(BASE_MIB_PATH, "logstash"), ::File.join(BASE_MIB_PATH, "ietf")].map { |path| ::File.expand_path(path) }
 
@@ -171,22 +175,32 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
             end
           end
         end
-
         unless result.empty?
-          metadata = {
-            "host_protocol" => definition[:host_protocol],
-            "host_address" => definition[:host_address],
-            "host_port" => definition[:host_port],
-            "host_community" => definition[:host_community],
-          }
-          result["@metadata"] = metadata
-
-          event = LogStash::Event.new(result)
-          decorate(event)
-          queue << event
-        end
+	  metadata = {
+	    "host_protocol" => definition[:host_protocol],
+	    "host_address" => definition[:host_address],
+	    "host_port" => definition[:host_port],
+	    "host_community" => definition[:host_community],
+	  }
+          if mode == "batch"
+                 result = result.merge(result);
+                 result["@metadata"] = metadata
+                 event = LogStash::Event.new(result)
+                 decorate(event)
+                 queue << event
+           else if mode == "single" # split
+                result.each_pair do |k,v|
+ 		  nresult = {}
+		  nresult[k] = v
+                  nresult["@metadata"] = metadata
+                  event = LogStash::Event.new(nresult)
+                  decorate(event)
+                  queue << event
+               end # each
+            end # elseif 
+           end # batch
+        end # unless
       end
-
       Stud.stoppable_sleep(@interval) { stop? }
     end
   end
