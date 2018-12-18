@@ -1,3 +1,7 @@
+## 1.0.2
+  - Added support for querying SNMP tables
+  - Changed three error messages in the base_client to include the target address for clarity in the logs.
+
 ## 1.0.1
   - Added no_codec condition to the documentation and bumped version [#39](https://github.com/logstash-plugins/logstash-input-snmp/pull/39)
   - Changed docs to improve options layout [#38](https://github.com/logstash-plugins/logstash-input-snmp/pull/38)
