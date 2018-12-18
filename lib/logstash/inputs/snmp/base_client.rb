@@ -18,6 +18,7 @@ java_import "org.snmp4j.smi.OctetString"
 java_import "org.snmp4j.smi.VariableBinding"
 java_import "org.snmp4j.transport.DefaultUdpTransportMapping"
 java_import "org.snmp4j.transport.DefaultTcpTransportMapping"
+java_import "org.snmp4j.util.TableUtils"
 java_import "org.snmp4j.util.TreeUtils"
 java_import "org.snmp4j.util.DefaultPDUFactory"
 java_import "org.snmp4j.asn1.BER"
@@ -52,11 +53,11 @@ module LogStash
       return nil if response_event.nil?
 
       e = response_event.getError
-      raise(SnmpClientError, "error sending snmp get request: #{e.inspect}, #{e.getMessage}") if e
+      raise(SnmpClientError, "error sending snmp get request to target #{@target.address}: #{e.inspect}, #{e.getMessage}") if e
 
       result = {}
       response_pdu = response_event.getResponse
-      raise(SnmpClientError, "timeout sending snmp get request") if response_pdu.nil?
+      raise(SnmpClientError, "timeout sending snmp get request to target #{@target.address}") if response_pdu.nil?
 
       size = response_pdu.size
       (0..size - 1).each do |i|
@@ -85,7 +86,7 @@ module LogStash
 
         if event.isError
           # TODO: see if we can salvage non errored event here
-          raise(SnmpClientError, "error sending snmp walk request: #{event.getErrorMessage}")
+          raise(SnmpClientError, "error sending snmp walk request to target #{@target.address}: #{event.getErrorMessage}")
         end
 
         var_bindings = event.getVariableBindings
@@ -102,6 +103,49 @@ module LogStash
         end
       end
 
+      result
+    end
+
+    def table(table, strip_root = 0)
+      result = {}
+      rows = []
+      pdufactory = get_pdu_factory
+      table_name = table["name"]
+      tableUtils = TableUtils.new(@snmp, pdufactory)
+
+      colOID = Array.new
+      Array(table["columns"]).each { |oid| colOID << OID.new(oid) }
+
+      events = tableUtils.getTable(@target, colOID.to_java(org.snmp4j.smi.OID), nil, nil)
+
+      return nil if events.nil? || events.size == 0
+      events.each do |event|
+        next if event.nil?
+
+        if event.isError
+          # TODO: see if we can salvage non errored event here
+          raise(SnmpClientError, "error sending snmp table request to target #{@target.address}: #{event.getErrorMessage}")
+        end
+
+        row = {}
+        idx_val = event.getIndex.toString
+        row["index"] = idx_val
+
+        var_bindings = event.getColumns
+        next if var_bindings.nil? || var_bindings.size == 0
+
+        var_bindings.each do |var_binding|
+          next if var_binding.nil?
+
+          oid = var_binding.getOid.toString
+          variable = var_binding.getVariable
+          value = coerce(variable)
+          mapped_oid = @mib.map_oid(oid, strip_root).sub('.'+idx_val, '')
+          row[mapped_oid] = value
+        end
+        rows << row
+      end
+      result[table_name] = rows
       result
     end
 

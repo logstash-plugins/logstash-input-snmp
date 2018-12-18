@@ -20,6 +20,9 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
   # List of OIDs for which we want to retrieve the subtree of information
   config :walk,:validate => :array # ["1.3.6.1.2.1.1.1.0"]
 
+  # List of tables to walk
+  config :tables, :validate => :array  #[ {"name" => "interfaces" "columns" => ["1.3.6.1.2.1.2.2.1.1", "1.3.6.1.2.1.2.2.1.2", "1.3.6.1.2.1.2.2.1.5"]} ]
+
   # List of hosts to query the configured `get` and `walk` options.
   #
   # Each host definition is a hash and must define the `host` key and value.
@@ -91,6 +94,7 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
   def register
     validate_oids!
     validate_hosts!
+    validate_tables!
 
     mib = LogStash::SnmpMib.new
 
@@ -172,6 +176,16 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
           end
         end
 
+        if  !Array(@tables).empty?
+          @tables.each do |table_entry|
+            begin
+              result = result.merge(definition[:client].table(table_entry, @oid_root_skip))
+            rescue => e
+              logger.error("error invoking table operation on OID: #{table_entry['name']}, ignoring", :exception => e, :backtrace => e.backtrace)
+            end
+          end
+        end
+
         unless result.empty?
           metadata = {
             "host_protocol" => definition[:host_protocol],
@@ -217,7 +231,20 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
       $1
     end
 
-    raise(LogStash::ConfigurationError, "at least one get OID or one walk OID is required") if @get.empty? && @walk.empty?
+    if !@tables.nil?
+      @tables.each do |table_entry|
+      # Verify oids for valid pattern and get rid of any leading dot if present
+        columns = table_entry["columns"]
+        columns.each do |column|
+          unless column =~ OID_REGEX
+      	    raise(Logstash::ConfigurationError, "The table column oid '#{column}' is an invalid format")
+          end
+        end
+        $1
+      end
+    end
+
+    raise(LogStash::ConfigurationError, "at least one get OID, one walk OID, or one table OID is required") if @get.empty? && @walk.empty? && @tables.nil?
   end
 
   def validate_v3_user!
@@ -240,6 +267,14 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
 
     @hosts.each do |host|
       raise(LogStash::ConfigurationError, "each host definition must have a \"host\" option") if !host.is_a?(Hash) || host["host"].nil?
+    end
+  end
+  
+  def validate_tables!
+    if !@tables.nil?
+      @tables.each do |table_entry|
+        raise(LogStash::ConfigurationError, "each table definition must have a \"name\" option") if !table_entry.is_a?(Hash) || table_entry["name"].nil?
+      end
     end
   end
 end
