@@ -1,4 +1,4 @@
-## 1.0.2
+## 1.1.0
   - Added support for querying SNMP tables
   - Changed three error messages in the base_client to include the target address for clarity in the logs.
 
