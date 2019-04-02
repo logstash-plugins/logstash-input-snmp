@@ -288,6 +288,25 @@ The `security_level` option specifies the SNMPv3 security level between Authenti
 * Value can be any of: `noAuthNoPriv`, `authNoPriv`, `authPriv`
 * There is no default value for this setting
 
+* Specifying SNMPv3 settings*
+
+[source,ruby]
+-----
+input {
+  snmp {
+    hosts => [{host => "udp:127.0.0.1/161" version => "3"}]
+    get => ["1.3.6.1.2.1.1.1.0"]
+    security_name => "mySecurityName"
+    auth_protocol => "sha"
+    auth_pass => "ShaPassword"
+    priv_protocol => "aes"
+    priv_pass => "AesPasword"
+    security_level => "authPriv"
+  }
+}
+
+-----
+
 ==== More configuration examples
 
 *Using both `get` and `walk` in the same poll cycle for each host(s)*
