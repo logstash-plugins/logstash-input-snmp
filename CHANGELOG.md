@@ -1,3 +1,6 @@
+## 1.1.1
+  - Added information and other improvements to documentation [#39](https://github.com/logstash-plugins/logstash-input-snmp/pull/39)
+
 ## 1.1.0
   - Added support for querying SNMP tables
   - Changed three error messages in the base_client to include the target address for clarity in the logs.
