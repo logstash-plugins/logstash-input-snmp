@@ -288,7 +288,7 @@ The `security_level` option specifies the SNMPv3 security level between Authenti
 * Value can be any of: `noAuthNoPriv`, `authNoPriv`, `authPriv`
 * There is no default value for this setting
 
-* Specifying SNMPv3 settings*
+*Specifying SNMPv3 settings*
 
 [source,ruby]
 -----
