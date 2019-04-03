@@ -45,7 +45,7 @@ module LogStash
       transport.listen()
     end
 
-    def get(oids, strip_root = 0)
+    def get(oids, strip_root = 0, path_length = 0)
       pdu = get_pdu
       Array(oids).each { |oid| pdu.add(VariableBinding.new(OID.new(oid))) }
 
@@ -66,14 +66,14 @@ module LogStash
         variable = variable_binding.getVariable
         value = coerce(variable)
 
-        result[@mib.map_oid(oid, strip_root)] = value
+        result[@mib.map_oid(oid, strip_root, path_length)] = value
       end
 
       result
     end
 
 
-    def walk(oid, strip_root = 0)
+    def walk(oid, strip_root = 0, path_length = 0)
       result = {}
 
       pdufactory = get_pdu_factory
@@ -99,14 +99,14 @@ module LogStash
           variable = var_binding.getVariable
           value = coerce(variable)
 
-          result[@mib.map_oid(oid, strip_root)] = value
+          result[@mib.map_oid(oid, strip_root, path_length)] = value
         end
       end
 
       result
     end
 
-    def table(table, strip_root = 0)
+    def table(table, strip_root = 0, path_length = 0)
       result = {}
       rows = []
       pdufactory = get_pdu_factory
@@ -140,7 +140,7 @@ module LogStash
           oid = var_binding.getOid.toString
           variable = var_binding.getVariable
           value = coerce(variable)
-          mapped_oid = @mib.map_oid(oid, strip_root).sub('.'+idx_val, '')
+          mapped_oid = @mib.map_oid(oid, strip_root, path_length).sub('.'+idx_val, '')
           row[mapped_oid] = value
         end
         rows << row

@@ -69,7 +69,7 @@ module LogStash
         current.childs[last_node] = node
       end
 
-      def map_oid(oid, strip_root = 0)
+      def map_oid(oid, strip_root = 0, path_length = 0)
         path = Oid.parse(oid)
 
         result = []
@@ -88,7 +88,13 @@ module LogStash
           result << node.name
         end
 
-        result.drop(strip_root).join(".")
+	if strip_root > 0
+	  result.drop(strip_root).join(".")
+	elsif path_length > 0
+	  result.pop(path_length).join(".")
+	else
+	  result.join(".")
+	end
       end
     end
 
@@ -136,8 +142,8 @@ module LogStash
       [module_name, nodes]
     end
 
-    def map_oid(oid, strip_root = 0)
-      @tree.map_oid(oid, strip_root)
+    def map_oid(oid, strip_root = 0, path_length = 0)
+      @tree.map_oid(oid, strip_root, path_length)
     end
 
     private

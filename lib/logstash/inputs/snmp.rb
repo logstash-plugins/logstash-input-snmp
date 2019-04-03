@@ -56,6 +56,12 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
   # as "1.3.6.1.2.mib-2.system.sysDescr.0" would become "mib-2.system.sysDescr.0"
   config :oid_root_skip, :validate => :number, :default => 0
 
+  # number of OID tail digits to retain in event field name. For example, in a numeric OID
+  # like 1.3.6.1.2.1.1.1.0" the last 2 digits could be retained by setting oid_path_length => 2
+  # which would result in a field name "1.0". Similarly, when a MIB is used an OID such as
+  # "1.3.6.1.2.mib-2.system.sysDescr.0" would become "sysDescr.0"
+  config :oid_path_length, :validate => :number, :default => 0
+
   # Set polling interval in seconds
   #
   # The default, `30`, means poll each host every 30 seconds.
@@ -95,6 +101,7 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
     validate_oids!
     validate_hosts!
     validate_tables!
+    validate_strip!
 
     mib = LogStash::SnmpMib.new
 
@@ -161,7 +168,7 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
         result = {}
         if !definition[:get].empty?
           begin
-            result = result.merge(definition[:client].get(definition[:get], @oid_root_skip))
+            result = result.merge(definition[:client].get(definition[:get], @oid_root_skip, @oid_path_length))
           rescue => e
             logger.error("error invoking get operation on #{definition[:host_address]} for OIDs: #{definition[:get]}, ignoring", :exception => e, :backtrace => e.backtrace)
           end
@@ -169,7 +176,7 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
         if  !definition[:walk].empty?
           definition[:walk].each do |oid|
             begin
-              result = result.merge(definition[:client].walk(oid, @oid_root_skip))
+              result = result.merge(definition[:client].walk(oid, @oid_root_skip, @oid_path_length))
             rescue => e
               logger.error("error invoking walk operation on OID: #{oid}, ignoring", :exception => e, :backtrace => e.backtrace)
             end
@@ -179,7 +186,7 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
         if  !Array(@tables).empty?
           @tables.each do |table_entry|
             begin
-              result = result.merge(definition[:client].table(table_entry, @oid_root_skip))
+              result = result.merge(definition[:client].table(table_entry, @oid_root_skip, @oid_path_length))
             rescue => e
               logger.error("error invoking table operation on OID: #{table_entry['name']}, ignoring", :exception => e, :backtrace => e.backtrace)
             end
@@ -276,5 +283,9 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
         raise(LogStash::ConfigurationError, "each table definition must have a \"name\" option") if !table_entry.is_a?(Hash) || table_entry["name"].nil?
       end
     end
+  end
+
+  def validate_strip!
+    raise(LogStash::ConfigurationError, "you can not specify both oid_root_skip and oid_path_length") if @oid_root_skip > 0 and @oid_path_length > 0
   end
 end
