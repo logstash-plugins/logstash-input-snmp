@@ -1,8 +1,11 @@
+## 1.2.0
+  - Adding oid_path_length config option [#59] (https://github.com/logstash-plugins/logstash-input-snmp/pull/59)
+
 ## 1.1.1
   - Added information and other improvements to documentation [#57](https://github.com/logstash-plugins/logstash-input-snmp/pull/57)
 
 ## 1.1.0
-  - Added support for querying SNMP tables
+  - Added support for querying SNMP tables [#49] (https://github.com/logstash-plugins/logstash-input-snmp/pull/49)
   - Changed three error messages in the base_client to include the target address for clarity in the logs.
 
 ## 1.0.1
