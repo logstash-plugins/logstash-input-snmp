@@ -140,7 +140,7 @@ module LogStash
           oid = var_binding.getOid.toString
           variable = var_binding.getVariable
           value = coerce(variable)
-          mapped_oid = @mib.map_oid(oid, strip_root, path_length).sub('.'+idx_val, '')
+          mapped_oid = @mib.map_oid(oid, strip_root, path_length).chomp('.'+idx_val)
           row[mapped_oid] = value
         end
         rows << row
