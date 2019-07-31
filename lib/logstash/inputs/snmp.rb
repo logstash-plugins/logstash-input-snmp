@@ -94,6 +94,9 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
   # The SNMPv3 security level can be Authentication, No Privacy; Authentication, Privacy; or no Authentication, no Privacy
   config :security_level, :validate => ["noAuthNoPriv", "authNoPriv", "authPriv"]
 
+  # The SNMPv3 optional engine ID
+  config :engine_id, :validate => :string
+
   BASE_MIB_PATH = ::File.join(__FILE__, "..", "..", "..", "mibs")
   PROVIDED_MIB_PATHS = [::File.join(BASE_MIB_PATH, "logstash"), ::File.join(BASE_MIB_PATH, "ietf")].map { |path| ::File.expand_path(path) }
 
@@ -152,7 +155,7 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
         validate_v3_user! # don't really care if verified for every host
         auth_pass = @auth_pass.nil? ? nil : @auth_pass.value
         priv_pass = @priv_pass.nil? ? nil : @priv_pass.value
-        definition[:client] = LogStash::SnmpClientV3.new(protocol, address, port, retries, timeout, mib, @security_name, @auth_protocol, auth_pass, @priv_protocol, priv_pass, @security_level)
+        definition[:client] = LogStash::SnmpClientV3.new(protocol, address, port, retries, timeout, mib, @security_name, @auth_protocol, auth_pass, @priv_protocol, priv_pass, @security_level, @engine_id)
       else
         definition[:client] = LogStash::SnmpClient.new(protocol, address, port, community, version, retries, timeout, mib)
       end
