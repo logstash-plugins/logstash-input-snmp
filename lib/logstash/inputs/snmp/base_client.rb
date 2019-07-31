@@ -159,9 +159,9 @@ module LogStash
       case variable_syntax
         when BER::OCTETSTRING, BER::BITSTRING
           variable.toString
-        when BER::TIMETICKS, BER::COUNTER, BER::COUNTER32, BER::COUNTER64
+        when BER::TIMETICKS, BER::COUNTER, BER::COUNTER32, BER::COUNTER64, BER::GAUGE, BER::GAUGE32
           variable.toLong
-        when BER::INTEGER, BER::INTEGER32, BER::GAUGE, BER::GAUGE32
+        when BER::INTEGER, BER::INTEGER32
           variable.toInt
         when BER::IPADDRESS
           variable.toString
