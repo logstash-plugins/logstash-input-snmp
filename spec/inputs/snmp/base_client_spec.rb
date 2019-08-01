@@ -36,7 +36,7 @@ module LogStash
         expect(subject.coerce(v)).to eq("error: unknown variable syntax 130, EndOfMibView")
       end
 	  
-	  it "should handle max unsigned 32 bits integer GAUGE32" do
+      it "should handle max unsigned 32 bits integer GAUGE32" do
         MAX_UNSIGNED_INT_32 = 4294967295
         v = Gauge32.new(MAX_UNSIGNED_INT_32)
         expect(subject.coerce(v)).to eq(MAX_UNSIGNED_INT_32)
