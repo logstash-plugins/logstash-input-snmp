@@ -4,6 +4,8 @@ require "logstash/inputs/snmp/base_client"
 
 java_import "org.snmp4j.smi.AbstractVariable"
 java_import "org.snmp4j.smi.SMIConstants"
+java_import "org.snmp4j.smi.Gauge32"
+java_import "org.snmp4j.smi.Integer32"
 
 module LogStash
 
