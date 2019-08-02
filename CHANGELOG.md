@@ -1,3 +1,6 @@
+## 1.2.1
+  - Fixed GAUGE32 integer overflow [#65] (https://github.com/logstash-plugins/logstash-input-snmp/pull/65)
+
 ## 1.2.0
   - Adding oid_path_length config option [#59] (https://github.com/logstash-plugins/logstash-input-snmp/pull/59)
   - Fixing bug with table support removing index value from OIDs [#60] )https://github.com/logstash-plugins/logstash-input-snmp/issues/60)
