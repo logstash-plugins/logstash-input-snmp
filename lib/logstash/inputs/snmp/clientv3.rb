@@ -39,7 +39,7 @@ java_import 'org.snmp4j.util.DefaultPDUFactory'
 module LogStash
   class SnmpClientV3 < BaseSnmpClient
 
-    def initialize(protocol, address, port, retries, timeout, mib, security_name, auth_protocol, auth_pass, priv_protocol, priv_pass, security_level)
+    def initialize(protocol, address, port, retries, timeout, mib, security_name, auth_protocol, auth_pass, priv_protocol, priv_pass, security_level, engine_id)
       super(protocol, address, port, retries, timeout, mib)
 
       security_level = parse_security_level(security_level)
@@ -48,8 +48,9 @@ module LogStash
       priv_protocol = parse_priv_protocol(priv_protocol)
       auth_pass = auth_pass.nil? ? nil : OctetString.new(auth_pass)
       priv_pass = priv_pass.nil? ? nil : OctetString.new(priv_pass)
+      engine_id = OctetString.new(engine_id.nil? ? MPv3.createLocalEngineID : engine_id)
 
-      usm = USM.new(SecurityProtocols.getInstance, OctetString.new(MPv3.createLocalEngineID), 0)
+      usm = USM.new(SecurityProtocols.getInstance, engine_id, 0)
       SecurityModels.getInstance.addSecurityModel(usm)
 
       @snmp.getUSM.addUser(UsmUser.new(security_name, auth_protocol, auth_pass, priv_protocol, priv_pass))
