@@ -2,27 +2,18 @@ require "java"
 require "logstash-input-snmp_jars.rb"
 require_relative "base_client"
 
-java_import "org.snmp4j.CommunityTarget"
-java_import "org.snmp4j.PDU"
-java_import "org.snmp4j.ScopedPDU"
-java_import "org.snmp4j.Snmp"
-java_import "org.snmp4j.Target"
-java_import "org.snmp4j.TransportMapping"
-java_import "org.snmp4j.event.ResponseEvent"
-java_import "org.snmp4j.mp.SnmpConstants"
-java_import "org.snmp4j.smi.Address"
-java_import "org.snmp4j.smi.GenericAddress"
-java_import "org.snmp4j.smi.OID"
-java_import "org.snmp4j.smi.OctetString"
-java_import "org.snmp4j.smi.VariableBinding"
-java_import "org.snmp4j.transport.DefaultUdpTransportMapping"
-java_import "org.snmp4j.transport.DefaultTcpTransportMapping"
-java_import "org.snmp4j.util.TreeUtils"
-java_import "org.snmp4j.util.DefaultPDUFactory"
-java_import "org.snmp4j.asn1.BER"
-
 module LogStash
   class SnmpClient < BaseSnmpClient
+
+    java_import "org.snmp4j.CommunityTarget"
+    java_import "org.snmp4j.PDU"
+    java_import "org.snmp4j.ScopedPDU"
+    java_import "org.snmp4j.Snmp"
+    java_import "org.snmp4j.Target"
+    java_import "org.snmp4j.smi.Address"
+    java_import "org.snmp4j.smi.GenericAddress"
+    java_import "org.snmp4j.smi.OctetString"
+    java_import "org.snmp4j.util.DefaultPDUFactory"
 
     def initialize(protocol, address, port, community, version, retries, timeout, mib)
       super(protocol, address, port, retries, timeout, mib)

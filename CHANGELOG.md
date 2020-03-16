@@ -1,15 +1,18 @@
+## 1.2.2
+  -  Refactor: scope and review java_imports [#72](https://github.com/logstash-plugins/logstash-input-snmp/pull/72)
+
 ## 1.2.1
-  - Fixed GAUGE32 integer overflow [#65] (https://github.com/logstash-plugins/logstash-input-snmp/pull/65)
+  - Fixed GAUGE32 integer overflow [#65](https://github.com/logstash-plugins/logstash-input-snmp/pull/65)
 
 ## 1.2.0
-  - Adding oid_path_length config option [#59] (https://github.com/logstash-plugins/logstash-input-snmp/pull/59)
-  - Fixing bug with table support removing index value from OIDs [#60] )https://github.com/logstash-plugins/logstash-input-snmp/issues/60)
+  - Adding oid_path_length config option [#59](https://github.com/logstash-plugins/logstash-input-snmp/pull/59)
+  - Fixing bug with table support removing index value from OIDs [#60])https://github.com/logstash-plugins/logstash-input-snmp/issues/60)
 
 ## 1.1.1
   - Added information and other improvements to documentation [#57](https://github.com/logstash-plugins/logstash-input-snmp/pull/57)
 
 ## 1.1.0
-  - Added support for querying SNMP tables [#49] (https://github.com/logstash-plugins/logstash-input-snmp/pull/49)
+  - Added support for querying SNMP tables [#49](https://github.com/logstash-plugins/logstash-input-snmp/pull/49)
   - Changed three error messages in the base_client to include the target address for clarity in the logs.
 
 ## 1.0.1
@@ -36,4 +39,3 @@
 
 ## 0.1.0.beta1
   - First beta version
-

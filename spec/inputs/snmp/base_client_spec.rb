@@ -2,12 +2,13 @@
 require "logstash/devutils/rspec/spec_helper"
 require "logstash/inputs/snmp/base_client"
 
-java_import "org.snmp4j.smi.AbstractVariable"
-java_import "org.snmp4j.smi.SMIConstants"
-java_import "org.snmp4j.smi.Gauge32"
-java_import "org.snmp4j.smi.Integer32"
-
 module LogStash
+
+  java_import "org.snmp4j.asn1.BER"
+  java_import "org.snmp4j.smi.AbstractVariable"
+  java_import "org.snmp4j.smi.SMIConstants"
+  java_import "org.snmp4j.smi.Gauge32"
+  java_import "org.snmp4j.smi.Integer32"
 
   class TestableBaseSnmpClient < BaseSnmpClient
     def coerce(*args)
@@ -35,7 +36,7 @@ module LogStash
         expect(subject).to receive(:logger).exactly(1).times.and_call_original
         expect(subject.coerce(v)).to eq("error: unknown variable syntax 130, EndOfMibView")
       end
-	  
+
       it "should handle max unsigned 32 bits integer GAUGE32" do
         MAX_UNSIGNED_INT_32 = 4294967295
         v = Gauge32.new(MAX_UNSIGNED_INT_32)
