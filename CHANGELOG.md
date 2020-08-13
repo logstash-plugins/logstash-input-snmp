@@ -1,3 +1,6 @@
+## 1.2.3
+  -  Fixed: multithreading problem when using multiple snmp inputs with multiple v3 credentials [#80](https://github.com/logstash-plugins/logstash-input-snmp/pull/80)
+
 ## 1.2.2
   -  Refactor: scope and review java_imports [#72](https://github.com/logstash-plugins/logstash-input-snmp/pull/72)
 
