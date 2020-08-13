@@ -2,14 +2,30 @@ require 'java'
 require 'logstash-input-snmp_jars.rb'
 
 module LogStash
-  class SnmpClientV3 < BaseSnmpClient
 
+  # Only a single USM instance should be created and added to the SecurityModels
+  class USMFactory
+    java_import 'org.snmp4j.security.SecurityProtocols'
+    java_import 'org.snmp4j.security.SecurityModels'
+    java_import 'org.snmp4j.security.USM'
+    java_import 'org.snmp4j.smi.OctetString'
+    java_import 'org.snmp4j.mp.MPv3'
+
+    include Singleton
+    attr_reader :usm
+
+    def initialize
+      @usm = USM.new(SecurityProtocols.getInstance, OctetString.new(MPv3.createLocalEngineID), 0)
+      SecurityModels.getInstance.addSecurityModel(@usm)
+    end
+  end
+
+  class SnmpClientV3 < BaseSnmpClient
     java_import 'org.snmp4j.PDU'
     java_import 'org.snmp4j.ScopedPDU'
     java_import 'org.snmp4j.Snmp'
     java_import 'org.snmp4j.Target'
     java_import 'org.snmp4j.event.ResponseEvent'
-    java_import 'org.snmp4j.mp.MPv3'
     java_import 'org.snmp4j.mp.SnmpConstants'
     java_import 'org.snmp4j.security.AuthMD5'
     java_import 'org.snmp4j.security.AuthSHA'
@@ -23,9 +39,6 @@ module LogStash
     java_import 'org.snmp4j.security.PrivAES128'
     java_import 'org.snmp4j.security.PrivAES192'
     java_import 'org.snmp4j.security.PrivAES256'
-    java_import 'org.snmp4j.security.SecurityModels'
-    java_import 'org.snmp4j.security.SecurityProtocols'
-    java_import 'org.snmp4j.security.USM'
     java_import 'org.snmp4j.security.UsmUser'
     java_import 'org.snmp4j.security.SecurityLevel'
     java_import 'org.snmp4j.smi.Address'
@@ -44,8 +57,8 @@ module LogStash
       auth_pass = auth_pass.nil? ? nil : OctetString.new(auth_pass)
       priv_pass = priv_pass.nil? ? nil : OctetString.new(priv_pass)
 
-      usm = USM.new(SecurityProtocols.getInstance, OctetString.new(MPv3.createLocalEngineID), 0)
-      SecurityModels.getInstance.addSecurityModel(usm)
+      # make sure the USM is initialized
+      USMFactory.instance
 
       @snmp.getUSM.addUser(UsmUser.new(security_name, auth_protocol, auth_pass, priv_protocol, priv_pass))
       @target = build_target("#{protocol}:#{address}/#{port}", security_name, security_level, retries, timeout)
