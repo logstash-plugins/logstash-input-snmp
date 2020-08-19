@@ -25,6 +25,10 @@ module LogStash
       @target = build_target("#{protocol}:#{address}/#{port}", community, version, retries, timeout)
     end
 
+    def close
+      @snmp.close
+    end
+
     private
 
     def get_pdu

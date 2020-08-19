@@ -15,6 +15,8 @@ describe LogStash::Inputs::Snmp do
     before do
       expect(LogStash::SnmpClient).to receive(:new).and_return(mock_client)
       expect(mock_client).to receive(:get).and_return({})
+      # devutils in v6 calls close on the test pipelines while it does not in v7+
+      expect(mock_client).to receive(:close).at_most(:once)
     end
   end
 
@@ -128,6 +130,8 @@ describe LogStash::Inputs::Snmp do
     before do
       expect(LogStash::SnmpClient).to receive(:new).and_return(mock_client)
       expect(mock_client).to receive(:get).and_return({"foo" => "bar"})
+      # devutils in v6 calls close on the test pipelines while it does not in v7+
+      expect(mock_client).to receive(:close).at_most(:once)
     end
 
     it "shoud add @metadata fields and add default host field" do

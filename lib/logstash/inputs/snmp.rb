@@ -212,7 +212,14 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
     end
   end
 
-  def stop
+  def close
+    @client_definitions.each do |definition|
+      begin
+        definition[:client].close
+      rescue => e
+        logger.warn("error closing client on #{definition[:host_address]}, ignoring", :exception => e)
+      end
+    end
   end
 
   private
