@@ -64,6 +64,10 @@ module LogStash
       @target = build_target("#{protocol}:#{address}/#{port}", security_name, security_level, retries, timeout)
     end
 
+    def close
+      @snmp.close
+    end
+
     private
 
     def build_target(address, name, seclevel, retries, timeout)
