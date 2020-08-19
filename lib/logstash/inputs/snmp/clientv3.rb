@@ -3,23 +3,6 @@ require 'logstash-input-snmp_jars.rb'
 
 module LogStash
 
-  # Only a single USM instance should be created and added to the SecurityModels
-  class USMFactory
-    java_import 'org.snmp4j.security.SecurityProtocols'
-    java_import 'org.snmp4j.security.SecurityModels'
-    java_import 'org.snmp4j.security.USM'
-    java_import 'org.snmp4j.smi.OctetString'
-    java_import 'org.snmp4j.mp.MPv3'
-
-    include Singleton
-    attr_reader :usm
-
-    def initialize
-      @usm = USM.new(SecurityProtocols.getInstance, OctetString.new(MPv3.createLocalEngineID), 0)
-      SecurityModels.getInstance.addSecurityModel(@usm)
-    end
-  end
-
   class SnmpClientV3 < BaseSnmpClient
     java_import 'org.snmp4j.PDU'
     java_import 'org.snmp4j.ScopedPDU'
@@ -41,11 +24,16 @@ module LogStash
     java_import 'org.snmp4j.security.PrivAES256'
     java_import 'org.snmp4j.security.UsmUser'
     java_import 'org.snmp4j.security.SecurityLevel'
+    java_import 'org.snmp4j.security.SecurityModels'
+    java_import 'org.snmp4j.security.SecurityProtocols'
+    java_import 'org.snmp4j.security.USM'
     java_import 'org.snmp4j.smi.Address'
     java_import 'org.snmp4j.smi.GenericAddress'
     java_import 'org.snmp4j.smi.OctetString'
     java_import 'org.snmp4j.UserTarget'
     java_import 'org.snmp4j.util.DefaultPDUFactory'
+    java_import 'org.snmp4j.mp.MPv3'
+    java_import "org.snmp4j.MessageDispatcherImpl"
 
     def initialize(protocol, address, port, retries, timeout, mib, security_name, auth_protocol, auth_pass, priv_protocol, priv_pass, security_level)
       super(protocol, address, port, retries, timeout, mib)
@@ -57,10 +45,22 @@ module LogStash
       auth_pass = auth_pass.nil? ? nil : OctetString.new(auth_pass)
       priv_pass = priv_pass.nil? ? nil : OctetString.new(priv_pass)
 
-      # make sure the USM is initialized
-      USMFactory.instance
+      engine_id = OctetString.new(MPv3.createLocalEngineID)
 
-      @snmp.getUSM.addUser(UsmUser.new(security_name, auth_protocol, auth_pass, priv_protocol, priv_pass))
+      security_protocols = SecurityProtocols.getInstance
+      security_protocols.addDefaultProtocols
+
+      usm = USM.new(security_protocols, engine_id, 0)
+      usm.addUser(UsmUser.new(security_name, auth_protocol, auth_pass, priv_protocol, priv_pass))
+
+      SecurityModels.getInstance.addSecurityModel(usm)
+
+      dispatcher = MessageDispatcherImpl.new
+      dispatcher.addMessageProcessingModel(MPv3.new(usm))
+
+      @snmp =  Snmp.new(dispatcher, create_transport(protocol))
+      @snmp.listen
+
       @target = build_target("#{protocol}:#{address}/#{port}", security_name, security_level, retries, timeout)
     end
 

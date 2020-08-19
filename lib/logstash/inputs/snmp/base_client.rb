@@ -7,42 +7,6 @@ module LogStash
   class SnmpClientError < StandardError
   end
 
-  # Only one Snmp instance per transport should be created and listened on.
-  # The Snmp object is thread safe and can be shared across input threads and pipelines.
-  class SnmpFactory
-    java_import "org.snmp4j.Snmp"
-    java_import "org.snmp4j.transport.DefaultUdpTransportMapping"
-    java_import "org.snmp4j.transport.DefaultTcpTransportMapping"
-
-    include Singleton
-
-    def initialize
-      @lock = Mutex.new
-      @udp = nil
-      @tcp = nil
-    end
-
-    def udp
-      @lock.synchronize do
-        if @udp.nil?
-          @udp = Snmp.new(DefaultUdpTransportMapping.new)
-          @udp.listen
-        end
-      end
-      @udp
-    end
-
-    def tcp
-      @lock.synchronize do
-        if @tcp.nil?
-          @tcp = Snmp.new(DefaultTcpTransportMapping.new)
-          @tcp.listen
-        end
-      end
-      @tcp
-    end
-  end
-
   class BaseSnmpClient
     java_import "org.snmp4j.TransportMapping"
     java_import "org.snmp4j.mp.SnmpConstants"
@@ -51,20 +15,13 @@ module LogStash
     java_import "org.snmp4j.util.TableUtils"
     java_import "org.snmp4j.util.TreeUtils"
     java_import "org.snmp4j.asn1.BER"
+    java_import "org.snmp4j.transport.DefaultUdpTransportMapping"
+    java_import "org.snmp4j.transport.DefaultTcpTransportMapping"
 
     include LogStash::Util::Loggable
 
     def initialize(protocol, address, port, retries, timeout, mib)
       @mib = mib
-
-      transport = case protocol.to_s
-        when "udp"
-          @snmp = SnmpFactory.instance.udp
-        when "tcp"
-          @snmp = SnmpFactory.instance.tcp
-        else
-          raise(SnmpClientError, "invalid transport protocol specified '#{protocol.to_s}', expecting 'udp' or 'tcp'")
-      end
     end
 
     def get(oids, strip_root = 0, path_length = 0)
@@ -93,7 +50,6 @@ module LogStash
 
       result
     end
-
 
     def walk(oid, strip_root = 0, path_length = 0)
       result = {}
@@ -202,7 +158,6 @@ module LogStash
       end
     end
 
-
     def parse_version(version)
       case version.to_s
         when "3"
@@ -217,6 +172,17 @@ module LogStash
     end
 
     private
+
+    def create_transport(protocol)
+      case protocol.to_s
+        when "udp"
+          DefaultUdpTransportMapping.new
+        when "tcp"
+          DefaultTcpTransportMapping.new
+        else
+          raise(SnmpClientError, "invalid transport protocol specified '#{protocol.to_s}', expecting 'udp' or 'tcp'")
+      end
+    end
 
     def get_pdu
       raise("abstract method")
