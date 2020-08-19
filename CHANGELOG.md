@@ -1,3 +1,6 @@
+## 1.2.4
+  -  Fixed: support SNMPv3 multiple identical security name with different credentials [#84](https://github.com/logstash-plugins/logstash-input-snmp/pull/84)
+
 ## 1.2.3
   -  Fixed: multithreading problem when using multiple snmp inputs with multiple v3 credentials [#80](https://github.com/logstash-plugins/logstash-input-snmp/pull/80)
 
