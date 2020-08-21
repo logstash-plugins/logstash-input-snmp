@@ -40,9 +40,7 @@ repositories {
 }
 
 dependencies {
-    compile 'org.snmp4j:snmp4j:2.5.11'
-//    compile 'org.apache.logging.log4j:log4j-slf4j-impl:2.8.2'
-//    compile 'org.apache.logging.log4j:log4j-api:2.8.2'
+    compile 'org.snmp4j:snmp4j:2.8.4'
 }
 task generateGemJarRequiresFile {
     doLast {
