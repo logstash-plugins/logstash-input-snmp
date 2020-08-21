@@ -1,3 +1,6 @@
+## 1.2.5
+  -  Updated snmp4j library to v2.8.4 [#86](https://github.com/logstash-plugins/logstash-input-snmp/pull/86)
+
 ## 1.2.4
   -  Fixed: support SNMPv3 multiple identical security name with different credentials [#84](https://github.com/logstash-plugins/logstash-input-snmp/pull/84)
 
