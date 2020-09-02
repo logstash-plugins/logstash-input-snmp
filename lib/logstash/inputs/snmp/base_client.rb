@@ -175,12 +175,12 @@ module LogStash
 
     def create_transport(protocol)
       case protocol.to_s
-        when "udp"
+        when "udp", "udp6"
           DefaultUdpTransportMapping.new
         when "tcp"
           DefaultTcpTransportMapping.new
         else
-          raise(SnmpClientError, "invalid transport protocol specified '#{protocol.to_s}', expecting 'udp' or 'tcp'")
+          raise(SnmpClientError, "invalid transport protocol specified '#{protocol.to_s}', expecting 'udp', 'udp6' or 'tcp'")
       end
     end
 
