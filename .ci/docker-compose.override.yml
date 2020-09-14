@@ -1,0 +1,32 @@
+version: '3'
+
+services:
+  logstash:
+    command: /usr/share/plugins/plugin/.ci/logstash-run.sh
+    environment:
+      - ELASTIC_STACK_VERSION=$ELASTIC_STACK_VERSION
+    depends_on:
+      - snmp1
+      - snmp2
+  snmp1:
+    hostname: snmp1
+    container_name: snmp1
+    ports:
+      - "161:161/tcp"
+      - "161:161/udp"
+    build:
+      context: .
+      dockerfile: Dockerfile.snmp
+      args:
+        - PORT=161
+  snmp2:
+    hostname: snmp2
+    container_name: snmp2
+    ports:
+      - "162:162/tcp"
+      - "162:162/udp"
+    build:
+      context: .
+      dockerfile: Dockerfile.snmp
+      args:
+        - PORT=162
