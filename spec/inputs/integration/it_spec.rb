@@ -123,21 +123,21 @@ describe LogStash::Inputs::Snmp do
       plugin.register
       plugin2.register
       queue = []
+      queue2 = []
       t = Thread.new {
         stop_plugin_after_seconds(plugin)
         plugin.run(queue)
       }
       t2 = Thread.new {
         stop_plugin_after_seconds(plugin2)
-        plugin2.run(queue)
+        plugin2.run(queue2)
       }
       t.join(2100)
       t2.join(2100)
       plugin.close
       plugin2.close
 
-      hosts = queue.map { |event| event.get("host") }.sort
-      expect(queue.size).to eq(2)
+      hosts = [queue.pop, queue2.pop].map { |event| event.get("host") }.sort
       expect(hosts).to eq(["snmp1", "snmp2"])
     end
   end
