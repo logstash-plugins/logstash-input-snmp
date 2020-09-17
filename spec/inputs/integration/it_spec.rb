@@ -5,16 +5,13 @@ describe LogStash::Inputs::Snmp do
   let(:config) { {"get" => ["1.3.6.1.2.1.1.1.0", "1.3.6.1.2.1.1.3.0", "1.3.6.1.2.1.1.5.0"]} }
   let(:plugin) { LogStash::Inputs::Snmp.new(config)}
 
-  after(:each) do
-    plugin.stop
-  end
-
   shared_examples "snmp plugin return single event" do
-    it "should has OID value" do
+    it "should have OID value" do
       plugin.register
       queue = []
       stop_plugin_after_seconds(plugin)
       plugin.run(queue)
+      plugin.close
       event = queue.pop
 
       expect(event).to be_a(LogStash::Event)
@@ -25,7 +22,7 @@ describe LogStash::Inputs::Snmp do
   end
 
   shared_examples "snmp plugin return one udp event and one tcp event" do |config|
-    it "should has one udp from snmp1 and one tcp from snmp2" do
+    it "should have one udp from snmp1 and one tcp from snmp2" do
       events = input(config) { |_, queue| 2.times.collect { queue.pop } }
       udp = 0; tcp = 0
       events.each { |event|
@@ -76,12 +73,13 @@ describe LogStash::Inputs::Snmp do
                                    "security_level" => "authPriv"
                                })}
 
-    it "should has error log" do
+    it "should have error log" do
       expect(plugin.logger).to receive(:error).once
       plugin.register
       queue = []
       stop_plugin_after_seconds(plugin)
       plugin.run(queue)
+      plugin.close
     end
   end
 
@@ -92,6 +90,7 @@ describe LogStash::Inputs::Snmp do
       queue = []
       stop_plugin_after_seconds(plugin)
       plugin.run(queue)
+      plugin.close
 
       host_cnt_snmp1 = queue.reduce(0) { |sum, event| sum + (event.get("host") == "snmp1"? 1: 0) }
       expect(queue.size).to eq(2)
@@ -106,6 +105,7 @@ describe LogStash::Inputs::Snmp do
       queue = []
       stop_plugin_after_seconds(plugin)
       plugin.run(queue)
+      plugin.close
 
       hosts = queue.map { |event| event.get("host") }.sort
       expect(queue.size).to eq(2)
@@ -133,6 +133,7 @@ describe LogStash::Inputs::Snmp do
       }
       t.join(2100)
       t2.join(2100)
+      plugin.close
       plugin2.close
 
       hosts = queue.map { |event| event.get("host") }.sort
