@@ -1,14 +1,17 @@
+## 1.2.6
+  - Docs: example on setting IPv6 hosts [#89](https://github.com/logstash-plugins/logstash-input-snmp/pull/89)
+
 ## 1.2.5
-  -  Updated snmp4j library to v2.8.4 [#86](https://github.com/logstash-plugins/logstash-input-snmp/pull/86)
+  - Updated snmp4j library to v2.8.4 [#86](https://github.com/logstash-plugins/logstash-input-snmp/pull/86)
 
 ## 1.2.4
-  -  Fixed: support SNMPv3 multiple identical security name with different credentials [#84](https://github.com/logstash-plugins/logstash-input-snmp/pull/84)
+  - Fixed: support SNMPv3 multiple identical security name with different credentials [#84](https://github.com/logstash-plugins/logstash-input-snmp/pull/84)
 
 ## 1.2.3
-  -  Fixed: multithreading problem when using multiple snmp inputs with multiple v3 credentials [#80](https://github.com/logstash-plugins/logstash-input-snmp/pull/80)
+  - Fixed: multithreading problem when using multiple snmp inputs with multiple v3 credentials [#80](https://github.com/logstash-plugins/logstash-input-snmp/pull/80)
 
 ## 1.2.2
-  -  Refactor: scope and review java_imports [#72](https://github.com/logstash-plugins/logstash-input-snmp/pull/72)
+  - Refactor: scope and review java_imports [#72](https://github.com/logstash-plugins/logstash-input-snmp/pull/72)
 
 ## 1.2.1
   - Fixed GAUGE32 integer overflow [#65](https://github.com/logstash-plugins/logstash-input-snmp/pull/65)

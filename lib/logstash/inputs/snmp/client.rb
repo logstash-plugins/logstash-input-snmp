@@ -17,7 +17,7 @@ module LogStash
 
     def initialize(protocol, address, port, community, version, retries, timeout, mib)
       super(protocol, address, port, retries, timeout, mib)
-      raise(SnmpClientError, "SnmpClient is expecting verison '1' or '2c'") unless ["1", "2c"].include?(version.to_s)
+      raise(SnmpClientError, "SnmpClient is expecting version '1' or '2c'") unless ["1", "2c"].include?(version.to_s)
 
       @snmp = Snmp.new(create_transport(protocol))
       @snmp.listen
