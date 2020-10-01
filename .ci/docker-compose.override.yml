@@ -1,0 +1,57 @@
+version: '2.4'
+
+services:
+  logstash:
+    container_name: snmp_ls
+    command: /usr/share/plugins/plugin/.ci/logstash-run.sh
+    environment:
+      - ELASTIC_STACK_VERSION=$ELASTIC_STACK_VERSION
+    depends_on:
+      - snmp1
+      - snmp2
+    networks:
+      app_net:
+        ipv4_address: 172.16.238.10
+        ipv6_address: 2001:3984:3989::10
+  snmp1:
+    hostname: snmp1
+    container_name: snmp1
+    ports:
+      - "161:161/tcp"
+      - "161:161/udp"
+    networks:
+      app_net:
+        ipv4_address: 172.16.238.161
+        ipv6_address: 2001:3984:3989::161
+    build:
+      context: .
+      dockerfile: Dockerfile.snmp
+      args:
+        - PORT=161
+  snmp2:
+    hostname: snmp2
+    container_name: snmp2
+    ports:
+      - "162:162/tcp"
+      - "162:162/udp"
+    networks:
+      app_net:
+        ipv4_address: 172.16.238.162
+        ipv6_address: 2001:3984:3989::162
+    build:
+      context: .
+      dockerfile: Dockerfile.snmp
+      args:
+        - PORT=162
+
+networks:
+  app_net:
+    driver: bridge
+    enable_ipv6: true
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.16.238.0/24
+          gateway: 172.16.238.1
+        - subnet: 2001:3984:3989::/64
+          gateway: 2001:3984:3989::1

@@ -1,3 +1,6 @@
+## 1.2.7
+  - Added integration tests to ensure SNMP server and IPv6 connections [#87](https://github.com/logstash-plugins/logstash-input-snmp/pull/87)
+
 ## 1.2.6
   - Docs: example on setting IPv6 hosts [#89](https://github.com/logstash-plugins/logstash-input-snmp/pull/89)
 
