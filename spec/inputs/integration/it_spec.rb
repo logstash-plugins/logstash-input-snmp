@@ -44,12 +44,12 @@ describe LogStash::Inputs::Snmp do
   end
 
   describe "against single snmp server with snmpv2 and udp", :integration => true do
-    let(:config) { super.merge({"hosts" => [{"host" => "udp:snmp1/161", "community" => "public"}]})}
+    let(:config) { super().merge({"hosts" => [{"host" => "udp:snmp1/161", "community" => "public"}]})}
     it_behaves_like "snmp plugin return single event"
   end
 
   describe "against single server with snmpv3 and tcp", :integration => true do
-    let(:config) { super.merge({
+    let(:config) { super().merge({
        "hosts" => [{"host" => "tcp:snmp1/161", "version" => "3"}],
        "security_name" => "user_1",
        "auth_protocol" => "sha",
@@ -63,7 +63,7 @@ describe LogStash::Inputs::Snmp do
   end
 
   describe "invalid user against snmpv3 server", :integration => true do
-    let(:config) { super.merge({
+    let(:config) { super().merge({
                                    "hosts" => [{"host" => "tcp:snmp1/161", "version" => "3"}],
                                    "security_name" => "user_2",
                                    "auth_protocol" => "sha",
@@ -84,7 +84,7 @@ describe LogStash::Inputs::Snmp do
   end
 
   describe "single input plugin on single server with snmpv2 and mix of udp and tcp", :integration => true do
-    let(:config) { super.merge({"hosts" => [{"host" => "udp:snmp1/161", "community" => "public"}, {"host" => "tcp:snmp1/161", "community" => "public"}]})}
+    let(:config) { super().merge({"hosts" => [{"host" => "udp:snmp1/161", "community" => "public"}, {"host" => "tcp:snmp1/161", "community" => "public"}]})}
     it "should return two events " do
       plugin.register
       queue = []
@@ -99,7 +99,7 @@ describe LogStash::Inputs::Snmp do
   end
 
   describe "single input plugin on multiple udp hosts", :integration => true do
-    let(:config) { super.merge({"hosts" => [{"host" => "udp:snmp1/161", "community" => "public"}, {"host" => "udp:snmp2/162", "community" => "public"}]})}
+    let(:config) { super().merge({"hosts" => [{"host" => "udp:snmp1/161", "community" => "public"}, {"host" => "udp:snmp2/162", "community" => "public"}]})}
     it "should return two events, one per host" do
       plugin.register
       queue = []
@@ -189,7 +189,7 @@ describe LogStash::Inputs::Snmp do
   end
 
   describe "single host with tcp over ipv6", :integration => true do
-    let(:config) { super.merge({"hosts" => [{"host" => "tcp:[2001:3984:3989::161]/161"}]})}
+    let(:config) { super().merge({"hosts" => [{"host" => "tcp:[2001:3984:3989::161]/161"}]})}
     it_behaves_like "snmp plugin return single event"
   end
 
