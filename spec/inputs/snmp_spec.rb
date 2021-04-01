@@ -15,8 +15,6 @@ describe LogStash::Inputs::Snmp do
     before do
       expect(LogStash::SnmpClient).to receive(:new).and_return(mock_client)
       expect(mock_client).to receive(:get).and_return({})
-      # devutils in v6 calls close on the test pipelines while it does not in v7+
-      expect(mock_client).to receive(:close).at_most(:once)
     end
   end
 
@@ -134,8 +132,7 @@ describe LogStash::Inputs::Snmp do
     before do
       expect(LogStash::SnmpClient).to receive(:new).and_return(mock_client)
       expect(mock_client).to receive(:get).and_return({"foo" => "bar"})
-      # devutils in v6 calls close on the test pipelines while it does not in v7+
-      expect(mock_client).to receive(:close).at_most(:once)
+      allow(mock_client).to receive(:close)
     end
 
     it "shoud add @metadata fields and add default host field" do
@@ -169,6 +166,29 @@ describe LogStash::Inputs::Snmp do
       event = input(config) { |_, queue| queue.pop }
 
       expect(event.get("host")).to eq("udp:127.0.0.1/161,public")
+    end
+  end
+
+  context "close" do
+    let(:config) do
+      <<-CONFIG
+          input {
+            snmp {
+              get => ["1.3.6.1.2.1.1.1.0"]
+              hosts => [{host => "udp:127.0.0.1/161" community => "public"}]
+            }
+          }
+      CONFIG
+    end
+
+    before do
+      expect(LogStash::SnmpClient).to receive(:new).and_return(mock_client)
+      expect(mock_client).to receive(:get).and_return({"foo" => "bar"})
+    end
+
+    it "should call the close method upon termination" do
+      expect(mock_client).to receive(:close).once
+      input(config) { }
     end
   end
 end
