@@ -167,6 +167,8 @@ The `interval` option specifies the polling interval in seconds.
 * Value type is <<number,number>>
 * Default value is `30`
 
+The interval creates a waiting time after all of the hosts have been polled.
+
 [id="plugins-{type}s-{plugin}-mib_paths"]
 ===== `mib_paths` 
 
