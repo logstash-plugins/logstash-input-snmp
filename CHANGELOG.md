@@ -1,3 +1,6 @@
+## 1.2.8
+ - Clarified the meaning of the interval parameter [#95](https://github.com/logstash-plugins/logstash-input-snmp/pull/95)
+
 ## 1.2.7
   - Added integration tests to ensure SNMP server and IPv6 connections [#87](https://github.com/logstash-plugins/logstash-input-snmp/pull/87)
 
