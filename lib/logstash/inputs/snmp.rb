@@ -7,11 +7,19 @@ require_relative "snmp/client"
 require_relative "snmp/clientv3"
 require_relative "snmp/mib"
 
+require 'logstash/plugin_mixins/ecs_compatibility_support'
+require 'logstash/plugin_mixins/event_support/event_factory_adapter'
+
 # Generate a repeating message.
 #
 # This plugin is intented only as an example.
 
 class LogStash::Inputs::Snmp < LogStash::Inputs::Base
+
+  include LogStash::PluginMixins::ECSCompatibilitySupport(:disabled, :v1, :v8 => :v1)
+
+  include LogStash::PluginMixins::EventSupport::EventFactoryAdapter
+
   config_name "snmp"
 
   # List of OIDs for which we want to retrieve the scalar value
@@ -202,7 +210,7 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
           }
           result["@metadata"] = metadata
 
-          event = LogStash::Event.new(result)
+          event = event_factory.new_event(result)
           decorate(event)
           queue << event
         end
