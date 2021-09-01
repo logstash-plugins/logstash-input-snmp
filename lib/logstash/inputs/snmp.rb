@@ -109,6 +109,11 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
     unless params.key?('add_field')
       @add_field = ecs_select[disabled: { "host" => "%{[@metadata][host_address]}" }, v1: {}]
     end
+
+    @host_protocol_field = ecs_select[disabled: '[@metadata][host_protocol]', v1: '[@metadata][input][snmp][host][protocol]']
+    @host_address_field = ecs_select[disabled: '[@metadata][host_address]', v1: '[@metadata][input][snmp][host][address]']
+    @host_port_field = ecs_select[disabled: '[@metadata][host_port]', v1: '[@metadata][input][snmp][host][port]']
+    @host_community_field = ecs_select[disabled: '[@metadata][host_community]', v1: '[@metadata][input][snmp][host][community]']
   end
 
   def register
@@ -179,28 +184,30 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
     # each run. each run polls all the defined hosts for the get and walk options.
     stoppable_interval_runner.every(@interval, "polling hosts") do
       @client_definitions.each do |definition|
+        client = definition[:client]
         result = {}
         if !definition[:get].empty?
+          oids = definition[:get]
           begin
-            result = result.merge(definition[:client].get(definition[:get], @oid_root_skip, @oid_path_length))
+            result = result.merge(client.get(oids, @oid_root_skip, @oid_path_length))
           rescue => e
-            logger.error("error invoking get operation on #{definition[:host_address]} for OIDs: #{definition[:get]}, ignoring", :exception => e, :backtrace => e.backtrace)
+            logger.error("error invoking get operation on #{definition[:host_address]} for OIDs: #{oids}, ignoring", :exception => e, :backtrace => e.backtrace)
           end
         end
-        if  !definition[:walk].empty?
+        if !definition[:walk].empty?
           definition[:walk].each do |oid|
             begin
-              result = result.merge(definition[:client].walk(oid, @oid_root_skip, @oid_path_length))
+              result = result.merge(client.walk(oid, @oid_root_skip, @oid_path_length))
             rescue => e
               logger.error("error invoking walk operation on OID: #{oid}, ignoring", :exception => e, :backtrace => e.backtrace)
             end
           end
         end
 
-        if  !Array(@tables).empty?
+        if !Array(@tables).empty?
           @tables.each do |table_entry|
             begin
-              result = result.merge(definition[:client].table(table_entry, @oid_root_skip, @oid_path_length))
+              result = result.merge(client.table(table_entry, @oid_root_skip, @oid_path_length))
             rescue => e
               logger.error("error invoking table operation on OID: #{table_entry['name']}, ignoring", :exception => e, :backtrace => e.backtrace)
             end
@@ -208,15 +215,11 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
         end
 
         unless result.empty?
-          metadata = {
-            "host_protocol" => definition[:host_protocol],
-            "host_address" => definition[:host_address],
-            "host_port" => definition[:host_port],
-            "host_community" => definition[:host_community],
-          }
-          result["@metadata"] = metadata
-
           event = event_factory.new_event(result)
+          event.set(@host_protocol_field, definition[:host_protocol])
+          event.set(@host_address_field, definition[:host_address])
+          event.set(@host_port_field, definition[:host_port])
+          event.set(@host_community_field, definition[:host_community])
           decorate(event)
           queue << event
         end

@@ -1,9 +1,11 @@
 # encoding: utf-8
 require "logstash/devutils/rspec/spec_helper"
 require "logstash/devutils/rspec/shared_examples"
+require 'logstash/plugin_mixins/ecs_compatibility_support/spec_helper'
 require "logstash/inputs/snmp"
 
-describe LogStash::Inputs::Snmp do
+describe LogStash::Inputs::Snmp, :ecs_compatibility_support do
+
   let(:mock_client) { double("LogStash::SnmpClient") }
 
   it_behaves_like "an interruptible input plugin" do
@@ -130,7 +132,12 @@ describe LogStash::Inputs::Snmp do
     end
   end
 
-  context "@metadata" do
+  ecs_compatibility_matrix(:disabled, :v1, :v8) do |ecs_select|
+
+    before(:each) do
+      allow_any_instance_of(described_class).to receive(:ecs_compatibility).and_return(ecs_compatibility)
+    end
+
     before do
       expect(LogStash::SnmpClient).to receive(:new).and_return(mock_client)
       expect(mock_client).to receive(:get).and_return({"foo" => "bar"})
@@ -143,25 +150,33 @@ describe LogStash::Inputs::Snmp do
           input {
             snmp {
               get => ["1.3.6.1.2.1.1.1.0"]
-              hosts => [{host => "udp:127.0.0.1/161" community => "public"}]
+              hosts => [{ host => "udp:127.0.0.1/161" community => "public" }]
             }
           }
       CONFIG
       event = input(config) { |_, queue| queue.pop }
 
-      expect(event.get("[@metadata][host_protocol]")).to eq("udp")
-      expect(event.get("[@metadata][host_address]")).to eq("127.0.0.1")
-      expect(event.get("[@metadata][host_port]")).to eq("161")
-      expect(event.get("[@metadata][host_community]")).to eq("public")
-      expect(event.get("host")).to eq("127.0.0.1")
+      if ecs_select.active_mode == :disabled
+        expect(event.get("[@metadata][host_protocol]")).to eq("udp")
+        expect(event.get("[@metadata][host_address]")).to eq("127.0.0.1")
+        expect(event.get("[@metadata][host_port]")).to eq("161")
+        expect(event.get("[@metadata][host_community]")).to eq("public")
+        expect(event.get("host")).to eq("127.0.0.1")
+      else
+        expect(event.get("[@metadata][input][snmp][host][protocol]")).to eq("udp")
+        expect(event.get("[@metadata][input][snmp][host][address]")).to eq("127.0.0.1")
+        expect(event.get("[@metadata][input][snmp][host][port]")).to eq('161')
+        expect(event.get("[@metadata][input][snmp][host][community]")).to eq("public")
+        expect(event.include?("host")).to be false
+      end
     end
 
-    it "shoud add custom host field" do
+    it "shoud add custom host field (legacy metadata)" do
       config = <<-CONFIG
           input {
             snmp {
               get => ["1.3.6.1.2.1.1.1.0"]
-              hosts => [{host => "udp:127.0.0.1/161" community => "public"}]
+              hosts => [{ host => "udp:127.0.0.1/161" community => "public" }]
               add_field => { host => "%{[@metadata][host_protocol]}:%{[@metadata][host_address]}/%{[@metadata][host_port]},%{[@metadata][host_community]}" }
             }
           }
@@ -169,7 +184,22 @@ describe LogStash::Inputs::Snmp do
       event = input(config) { |_, queue| queue.pop }
 
       expect(event.get("host")).to eq("udp:127.0.0.1/161,public")
-    end
+    end if ecs_select.active_mode == :disabled
+
+    it "shoud add custom host field (ECS mode)" do
+      config = <<-CONFIG
+          input {
+            snmp {
+              get => ["1.3.6.1.2.1.1.1.0"]
+              hosts => [{ host => "tls:192.168.1.11/1161" }]
+              add_field => { "[host][formatted]" => "%{[@metadata][input][snmp][host][protocol]}://%{[@metadata][input][snmp][host][address]}:%{[@metadata][input][snmp][host][port]}" }
+            }
+          }
+      CONFIG
+      event = input(config) { |_, queue| queue.pop }
+
+      expect(event.get("host")).to eq('formatted' => "tls://192.168.1.11:1161")
+    end if ecs_select.active_mode != :disabled
   end
 
   context "StoppableIntervalRunner" do
