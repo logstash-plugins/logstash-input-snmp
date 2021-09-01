@@ -75,9 +75,6 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
   # The default, `30`, means poll each host every 30 seconds.
   config :interval, :validate => :number, :default => 30
 
-  # Add the default "host" field to the event.
-  config :add_field, :validate => :hash, :default => { "host" => "%{[@metadata][host_address]}" }
-
   # SNMPv3 Credentials
   #
   # A single user can be configured and will be used for all defined SNMPv3 hosts.
@@ -104,6 +101,15 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
 
   BASE_MIB_PATH = ::File.join(__FILE__, "..", "..", "..", "mibs")
   PROVIDED_MIB_PATHS = [::File.join(BASE_MIB_PATH, "logstash"), ::File.join(BASE_MIB_PATH, "ietf")].map { |path| ::File.expand_path(path) }
+
+  def initialize(params={})
+    super(params)
+
+    # Add the default "host" field to the event, for backwards compatibility
+    unless params.key?('add_field')
+      @add_field = ecs_select[disabled: { "host" => "%{[@metadata][host_address]}" }, v1: {}]
+    end
+  end
 
   def register
     validate_oids!
