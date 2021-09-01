@@ -191,7 +191,8 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
           begin
             result = result.merge(client.get(oids, @oid_root_skip, @oid_path_length))
           rescue => e
-            logger.error("error invoking get operation on #{definition[:host_address]} for OIDs: #{oids}, ignoring", :exception => e, :backtrace => e.backtrace)
+            logger.error("error invoking get operation for OIDs: #{oids}, ignoring",
+                         host: definition[:host_address], exception: e, backtrace: e.backtrace)
           end
         end
         if !definition[:walk].empty?
@@ -199,7 +200,8 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
             begin
               result = result.merge(client.walk(oid, @oid_root_skip, @oid_path_length))
             rescue => e
-              logger.error("error invoking walk operation on OID: #{oid}, ignoring", :exception => e, :backtrace => e.backtrace)
+              logger.error("error invoking walk operation on OID: #{oid}, ignoring",
+                           host: definition[:host_address], exception: e, backtrace: e.backtrace)
             end
           end
         end
@@ -209,7 +211,8 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
             begin
               result = result.merge(client.table(table_entry, @oid_root_skip, @oid_path_length))
             rescue => e
-              logger.error("error invoking table operation on OID: #{table_entry['name']}, ignoring", :exception => e, :backtrace => e.backtrace)
+              logger.error("error invoking table operation on OID: #{table_entry['name']}, ignoring",
+                           host: definition[:host_address], exception: e, backtrace: e.backtrace)
             end
           end
         end
@@ -222,6 +225,8 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
           event.set(@host_community_field, definition[:host_community])
           decorate(event)
           queue << event
+        else
+          logger.debug? && logger.debug("no snmp data retrieved", host: definition[:host_address])
         end
       end
     end
