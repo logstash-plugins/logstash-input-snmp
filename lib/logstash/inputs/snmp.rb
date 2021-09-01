@@ -146,7 +146,7 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
       # TODO: move these validations in a custom validator so it happens before the register method is called.
       host_details = host_name.match(HOST_REGEX)
       raise(LogStash::ConfigurationError, "invalid format for host option '#{host_name}'") unless host_details
-      raise(LogStash::ConfigurationError, "only udp & tcp protocols are supported for host option '#{host_name}'") unless host_details[:host_protocol].to_s =~ /^(?:udp|tcp)$/i
+      raise(LogStash::ConfigurationError, "unsupported protocol for host option '#{host_name}'") unless host_details[:host_protocol].to_s =~ /^(?:udp|tcp|tls)$/i
 
       protocol = host_details[:host_protocol]
       address = host_details[:host_address]
@@ -244,7 +244,7 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
   private
 
   OID_REGEX = /^\.?([0-9\.]+)$/
-  HOST_REGEX = /^(?<host_protocol>udp|tcp):(?<host_address>.+)\/(?<host_port>\d+)$/i
+  HOST_REGEX = /^(?<host_protocol>\w+):(?<host_address>.+)\/(?<host_port>\d+)$/i
   VERSION_REGEX =/^1|2c|3$/
 
   def validate_oids!
