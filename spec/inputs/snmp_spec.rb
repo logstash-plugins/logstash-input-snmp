@@ -171,5 +171,95 @@ describe LogStash::Inputs::Snmp do
       expect(event.get("host")).to eq("udp:127.0.0.1/161,public")
     end
   end
+
+  context "StoppableIntervalRunner" do
+    let(:stop_holder) { Struct.new(:value).new(false) }
+
+    before(:each) do
+      allow(plugin).to receive(:stop?) { stop_holder.value }
+    end
+
+    let(:plugin) do
+      double("Plugin").tap do |dbl|
+        allow(dbl).to receive(:logger).and_return(double("Logger").as_null_object)
+        allow(dbl).to receive(:stop?) { stop_holder.value }
+      end
+    end
+
+    subject(:interval_runner) { LogStash::Inputs::Snmp::StoppableIntervalRunner.new(plugin) }
+
+    context "#every" do
+      context "when the plugin is stopped" do
+        let(:interval_seconds) { 2 }
+        it 'does not yield the block' do
+          stop_holder.value = true
+          expect { |yielder| interval_runner.every(interval_seconds, &yielder) }.to_not yield_control
+        end
+      end
+
+      context "when the yield takes shorter than the interval" do
+        let(:duration_seconds) { 1 }
+        let(:interval_seconds) { 2 }
+
+        it 'sleeps off the remainder' do
+          allow(interval_runner).to receive(:sleep).and_call_original
+
+          interval_runner.every(interval_seconds) do
+            Kernel::sleep(duration_seconds) # non-stoppable
+            stop_holder.value = true # prevent re-runs
+          end
+
+          expect(interval_runner).to have_received(:sleep).with(a_value_within(0.1).of(1))
+        end
+      end
+
+      context "when the yield takes longer than the interval" do
+        let(:duration_seconds) { 2 }
+        let(:interval_seconds) { 1 }
+
+        it 'logs a warning to the plugin' do
+          allow(interval_runner).to receive(:sleep).and_call_original
+
+          interval_runner.every(interval_seconds) do
+            Kernel::sleep(duration_seconds) # non-stoppable
+            stop_holder.value = true # prevent re-runs
+          end
+
+          expect(interval_runner).to_not have_received(:sleep)
+
+          expect(plugin.logger).to have_received(:warn).with(a_string_including("took longer"), a_hash_including(:interval_seconds => interval_seconds, :duration_seconds => a_value_within(0.1).of(duration_seconds)))
+        end
+      end
+
+      it 'runs regularly until the plugin is stopped' do
+        timestamps = []
+
+        thread = Thread.new do
+          interval_runner.every(1) do
+            timestamps << Time.now
+            Kernel::sleep(Random::rand(0.8))
+          end
+        end
+
+        Kernel::sleep(5)
+        expect(thread).to be_alive
+
+        stop_holder.value = true
+        Kernel::sleep(1)
+
+        aggregate_failures do
+          expect(thread).to_not be_alive
+          expect(timestamps.count).to be_within(1).of(5)
+
+          timestamps.each_cons(2) do |previous, current|
+            # ensure each start time is very close to 1s after the previous.
+            expect(current - previous).to be_within(0.02).of(1)
+          end
+
+          thread.kill if thread.alive?
+        end
+      end
+    end
+  end
 end
 
