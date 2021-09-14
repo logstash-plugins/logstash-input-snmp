@@ -253,7 +253,7 @@ describe LogStash::Inputs::Snmp do
 
           timestamps.each_cons(2) do |previous, current|
             # ensure each start time is very close to 1s after the previous.
-            expect(current - previous).to be_within(0.02).of(1)
+            expect(current - previous).to be_within(0.05).of(1)
           end
 
           thread.kill if thread.alive?
