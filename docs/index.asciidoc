@@ -163,6 +163,7 @@ input {
 ===== `interval` 
 
 The `interval` option specifies the polling interval in seconds.
+If polling all configured hosts takes longer than this interval, a warning will be emitted to the logs.
 
 * Value type is <<number,number>>
 * Default value is `30`
