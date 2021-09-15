@@ -1,8 +1,8 @@
 ## 1.2.8
-  - Fixed interval handling to only sleep off the _remainder_ of the interval (if any), and to log a helpful warning when crawling the hosts takes longer than the configured interval [#61](https://github.com/logstash-plugins/logstash-input-snmp/issues/61)
+  - Fixed interval handling to only sleep off the _remainder_ of the interval (if any), and to log a helpful warning when crawling the hosts takes longer than the configured interval [#100](https://github.com/logstash-plugins/logstash-input-snmp/pull/100). Fixes [#61](https://github.com/logstash-plugins/logstash-input-snmp/issues/61).
 
 ## 1.2.7
-  - Added integration tests to ensure SNMP server and IPv6 connections [#87](https://github.com/logstash-plugins/logstash-input-snmp/pull/87)
+  - Added integration tests to ensure SNMP server and IPv6 connections [#90](https://github.com/logstash-plugins/logstash-input-snmp/issues/90). Fixes[#87](https://github.com/logstash-plugins/logstash-input-snmp/issues/87).
 
 ## 1.2.6
   - Docs: example on setting IPv6 hosts [#89](https://github.com/logstash-plugins/logstash-input-snmp/pull/89)
