@@ -191,14 +191,14 @@ describe LogStash::Inputs::Snmp, :ecs_compatibility_support do
           input {
             snmp {
               get => ["1.3.6.1.2.1.1.1.0"]
-              hosts => [{ host => "tls:192.168.1.11/1161" }]
+              hosts => [{ host => "tcp:192.168.1.11/1161" }]
               add_field => { "[host][formatted]" => "%{[@metadata][input][snmp][host][protocol]}://%{[@metadata][input][snmp][host][address]}:%{[@metadata][input][snmp][host][port]}" }
             }
           }
       CONFIG
       event = input(config) { |_, queue| queue.pop }
 
-      expect(event.get("host")).to eq('formatted' => "tls://192.168.1.11:1161")
+      expect(event.get("host")).to eq('formatted' => "tcp://192.168.1.11:1161")
     end if ecs_select.active_mode != :disabled
   end
 

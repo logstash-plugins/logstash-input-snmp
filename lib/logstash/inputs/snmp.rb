@@ -151,7 +151,7 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
       # TODO: move these validations in a custom validator so it happens before the register method is called.
       host_details = host_name.match(HOST_REGEX)
       raise(LogStash::ConfigurationError, "invalid format for host option '#{host_name}'") unless host_details
-      raise(LogStash::ConfigurationError, "unsupported protocol for host option '#{host_name}'") unless host_details[:host_protocol].to_s =~ /^(?:udp|tcp|tls)$/i
+      raise(LogStash::ConfigurationError, "only udp & tcp protocols are supported for host option '#{host_name}'") unless host_details[:host_protocol].to_s =~ /^(?:udp|tcp)$/i
 
       protocol = host_details[:host_protocol]
       address = host_details[:host_address]
