@@ -1,5 +1,6 @@
-## Unreleased
-  - Fix: update to Gradle 7 [#102](https://github.com/logstash-plugins/logstash-input-snmp/pull/102)
+## 1.3.0
+  - Feat: ECS compliance + optional target [#99](https://github.com/logstash-plugins/logstash-input-snmp/pull/99)
+  - Internal: update to Gradle 7 [#102](https://github.com/logstash-plugins/logstash-input-snmp/pull/102)
 
 ## 1.2.8
   - Fixed interval handling to only sleep off the _remainder_ of the interval (if any), and to log a helpful warning when crawling the hosts takes longer than the configured interval [#100](https://github.com/logstash-plugins/logstash-input-snmp/pull/100). Fixes [#61](https://github.com/logstash-plugins/logstash-input-snmp/issues/61).
