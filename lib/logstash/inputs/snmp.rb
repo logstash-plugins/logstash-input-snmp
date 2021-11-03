@@ -8,7 +8,9 @@ require_relative "snmp/clientv3"
 require_relative "snmp/mib"
 
 require 'logstash/plugin_mixins/ecs_compatibility_support'
+require 'logstash/plugin_mixins/ecs_compatibility_support/target_check'
 require 'logstash/plugin_mixins/event_support/event_factory_adapter'
+require 'logstash/plugin_mixins/validator_support/field_reference_validation_adapter'
 
 # Generate a repeating message.
 #
@@ -17,6 +19,7 @@ require 'logstash/plugin_mixins/event_support/event_factory_adapter'
 class LogStash::Inputs::Snmp < LogStash::Inputs::Base
 
   include LogStash::PluginMixins::ECSCompatibilitySupport(:disabled, :v1, :v8 => :v1)
+  include LogStash::PluginMixins::ECSCompatibilitySupport::TargetCheck
 
   include LogStash::PluginMixins::EventSupport::EventFactoryAdapter
 
@@ -98,6 +101,11 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
 
   # The SNMPv3 security level can be Authentication, No Privacy; Authentication, Privacy; or no Authentication, no Privacy
   config :security_level, :validate => ["noAuthNoPriv", "authNoPriv", "authPriv"]
+
+  # Defines a target field for placing fields.
+  # If this setting is omitted, data gets stored at the root (top level) of the event.
+  # The target is only relevant while decoding data into a new event.
+  config :target, :validate => :field_reference
 
   BASE_MIB_PATH = ::File.join(__FILE__, "..", "..", "..", "mibs")
   PROVIDED_MIB_PATHS = [::File.join(BASE_MIB_PATH, "logstash"), ::File.join(BASE_MIB_PATH, "ietf")].map { |path| ::File.expand_path(path) }
@@ -218,7 +226,7 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
         end
 
         unless result.empty?
-          event = event_factory.new_event(result)
+          event = targeted_event_factory.new_event(result)
           event.set(@host_protocol_field, definition[:host_protocol])
           event.set(@host_address_field, definition[:host_address])
           event.set(@host_port_field, definition[:host_port])

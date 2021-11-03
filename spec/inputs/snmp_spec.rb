@@ -171,7 +171,7 @@ describe LogStash::Inputs::Snmp, :ecs_compatibility_support do
       end
     end
 
-    it "shoud add custom host field (legacy metadata)" do
+    it "should add custom host field (legacy metadata)" do
       config = <<-CONFIG
           input {
             snmp {
@@ -186,7 +186,7 @@ describe LogStash::Inputs::Snmp, :ecs_compatibility_support do
       expect(event.get("host")).to eq("udp:127.0.0.1/161,public")
     end if ecs_select.active_mode == :disabled
 
-    it "shoud add custom host field (ECS mode)" do
+    it "should add custom host field (ECS mode)" do
       config = <<-CONFIG
           input {
             snmp {
@@ -200,6 +200,22 @@ describe LogStash::Inputs::Snmp, :ecs_compatibility_support do
 
       expect(event.get("host")).to eq('formatted' => "tcp://192.168.1.11:1161")
     end if ecs_select.active_mode != :disabled
+
+    it "should target event data" do
+      config = <<-CONFIG
+          input {
+            snmp {
+              get => ["1.3.6.1.2.1.1.1.0"]
+              hosts => [{ host => "udp:127.0.0.1/161" community => "public" }]
+              target => "snmp_data"
+            }
+          }
+      CONFIG
+      event = input(config) { |_, queue| queue.pop }
+
+      expect( event.include?('foo') ).to be false
+      expect( event.get('[snmp_data]') ).to eql 'foo' => 'bar'
+    end
   end
 
   context "StoppableIntervalRunner" do
