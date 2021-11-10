@@ -23,6 +23,8 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
 
   include LogStash::PluginMixins::EventSupport::EventFactoryAdapter
 
+  extend LogStash::PluginMixins::ValidatorSupport::FieldReferenceValidationAdapter
+
   config_name "snmp"
 
   # List of OIDs for which we want to retrieve the scalar value
