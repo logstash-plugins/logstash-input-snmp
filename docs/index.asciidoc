@@ -26,6 +26,21 @@ to gather information related to the current state of the devices operation.
 
 The SNMP input plugin supports SNMP v1, v2c, and v3 over UDP and TCP transport protocols.
 
+==== Compatibility with the Elastic Common Schema (ECS)
+
+Since SNMP data has specific field names, based on OIDs, we recommend setting a <<plugins-{type}s-{plugin}-target>>.
+Meta-data fields started following a naming convention when <<plugins-{type}s-{plugin}-ecs_compatibility,ECS compatibility mode>> in enabled.
+
+[cols="<l,<l,e,<e"]
+|=======================================================================
+|ECS disabled |ECS v1, v8 |Description
+|[@metadata][host_protocol]    |[@metadata][input][snmp][host][protocol]    |The protocol used to retrieve data e.g. "udp"
+|[@metadata][host_address]     |[@metadata][input][snmp][host][address]     |The host IP e.g. "192.168.1.1"
+|[@metadata][host_port]        |[@metadata][input][snmp][host][port]        |The host's port e.g. "161"
+|[@metadata][host_community]   |[@metadata][input][snmp][host][community]   |The configured community e.g. "public"
+|[host]                        |N/A                                         |Same as `[@metadata][host_address]`, no longer set in ECS mode
+|=======================================================================
+
 [id="plugins-{type}s-{plugin}-import-mibs"]
 ==== Importing MIBs 
 
