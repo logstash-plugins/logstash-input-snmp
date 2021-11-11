@@ -343,7 +343,7 @@ The `security_name` option specifies the SNMPv3 security name or user name.
   * There is no default value for this setting
 
 The `security_level` option specifies the SNMPv3 security level between
-Authentication, No Privacy; Authentication, Privacy; or no Authentication, no Privacy
+Authentication, No Privacy; Authentication, Privacy; or no Authentication, no Privacy. 
 
 [id="plugins-{type}s-{plugin}-target"]
 ===== `target`
