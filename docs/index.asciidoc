@@ -356,6 +356,7 @@ If not specified data will be stored in the root of the event.
 
 Setting a target is recommended when <<plugins-{type}s-{plugin}-ecs_compatibility>> is enabled.
 
+[id="plugins-{type}s-{plugin}-examples"]
 ==== Configuration examples
 
 *Specifying SNMPv3 settings*
