@@ -354,7 +354,7 @@ Authentication, No Privacy; Authentication, Privacy; or no Authentication, no Pr
 The name of the field under which SNMP payloads are assigned.
 If not specified data will be stored in the root of the event.
 
-Setting a target is recommended when <<plugins-{type}s-{plugin}-ecs_compatibility>> enabled.
+Setting a target is recommended when <<plugins-{type}s-{plugin}-ecs_compatibility>> is enabled.
 
 ==== Configuration examples
 
