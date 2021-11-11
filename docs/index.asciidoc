@@ -28,8 +28,8 @@ The SNMP input plugin supports SNMP v1, v2c, and v3 over UDP and TCP transport p
 
 ==== Compatibility with the Elastic Common Schema (ECS)
 
-Since SNMP data has specific field names, based on OIDs, we recommend setting a <<plugins-{type}s-{plugin}-target>>.
-Meta-data fields started following a naming convention when <<plugins-{type}s-{plugin}-ecs_compatibility,ECS compatibility mode>> in enabled.
+Because SNMP data has specific field names based on OIDs, we recommend setting a <<plugins-{type}s-{plugin}-target>>.
+Metadata fields follow a specific naming convention when <<plugins-{type}s-{plugin}-ecs_compatibility,ECS compatibility mode>> is enabled.
 
 [cols="<l,<l,e,<e"]
 |=======================================================================
