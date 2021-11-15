@@ -161,13 +161,13 @@ describe LogStash::Inputs::Snmp, :ecs_compatibility_support do
         expect(event.get("[@metadata][host_address]")).to eq("127.0.0.1")
         expect(event.get("[@metadata][host_port]")).to eq("161")
         expect(event.get("[@metadata][host_community]")).to eq("public")
-        expect(event.get("host")).to eq("127.0.0.1")
+        expect(event.get("host")).to eql("127.0.0.1")
       else
         expect(event.get("[@metadata][input][snmp][host][protocol]")).to eq("udp")
         expect(event.get("[@metadata][input][snmp][host][address]")).to eq("127.0.0.1")
         expect(event.get("[@metadata][input][snmp][host][port]")).to eq('161')
         expect(event.get("[@metadata][input][snmp][host][community]")).to eq("public")
-        expect(event.include?("host")).to be false
+        expect(event.get("host")).to eql('ip' => "127.0.0.1")
       end
     end
 
