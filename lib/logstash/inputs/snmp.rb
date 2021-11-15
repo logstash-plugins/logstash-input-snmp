@@ -115,15 +115,16 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
   def initialize(params={})
     super(params)
 
-    # Add the default "host" field to the event, for backwards compatibility
-    unless params.key?('add_field')
-      @add_field = ecs_select[disabled: { "host" => "%{[@metadata][host_address]}" }, v1: {}]
-    end
-
     @host_protocol_field = ecs_select[disabled: '[@metadata][host_protocol]', v1: '[@metadata][input][snmp][host][protocol]']
     @host_address_field = ecs_select[disabled: '[@metadata][host_address]', v1: '[@metadata][input][snmp][host][address]']
     @host_port_field = ecs_select[disabled: '[@metadata][host_port]', v1: '[@metadata][input][snmp][host][port]']
     @host_community_field = ecs_select[disabled: '[@metadata][host_community]', v1: '[@metadata][input][snmp][host][community]']
+
+    # Add the default "host" field to the event, for backwards compatibility, or host.ip in ecs mode
+    unless params.key?('add_field')
+      host_ip_field = ecs_select[disabled: "host", v1: "[host][ip]"]
+      @add_field = { host_ip_field => "%{#{@host_address_field}}" }
+    end
   end
 
   def register
