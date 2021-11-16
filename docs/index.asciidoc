@@ -26,6 +26,7 @@ to gather information related to the current state of the devices operation.
 
 The SNMP input plugin supports SNMP v1, v2c, and v3 over UDP and TCP transport protocols.
 
+[id="plugins-{type}s-{plugin}-ecs"]
 ==== Compatibility with the Elastic Common Schema (ECS)
 
 Because SNMP data has specific field names based on OIDs, we recommend setting a <<plugins-{type}s-{plugin}-target>>.
