@@ -39,7 +39,7 @@ Metadata fields follow a specific naming convention when <<plugins-{type}s-{plug
 |[@metadata][host_address]     |[@metadata][input][snmp][host][address]     |The host IP e.g. "192.168.1.1"
 |[@metadata][host_port]        |[@metadata][input][snmp][host][port]        |The host's port e.g. "161"
 |[@metadata][host_community]   |[@metadata][input][snmp][host][community]   |The configured community e.g. "public"
-|[host]                        |N/A                                         |Same as `[@metadata][host_address]`, no longer set in ECS mode
+|[host]                        |[host][ip]                                  |Same as `[@metadata][host_address]`, host's IP address
 |=======================================================================
 
 [id="plugins-{type}s-{plugin}-import-mibs"]
@@ -305,7 +305,7 @@ The `auth_protocol` option specifies the SNMPv3 authentication protocol or type
   * Value type is <<string,string>>
   * Supported values are:
     ** `disabled`: does not use ECS-compatible field names (fields might be set at the root of the event)
-    ** `v1`, `v8`: avoids field names that might conflict with Elastic Common Schema (for example, JMS specific properties)
+    ** `v1`, `v8`: avoids field names that might conflict with Elastic Common Schema (for example, the `host` field)
   * Default value depends on which version of Logstash is running:
     ** When Logstash provides a `pipeline.ecs_compatibility` setting, its value is used as the default
     ** Otherwise, the default value is `disabled`.
