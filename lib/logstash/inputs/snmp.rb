@@ -196,23 +196,34 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
     stoppable_interval_runner.every(@interval, "polling hosts") do
       @client_definitions.each do |definition|
         client = definition[:client]
+        host = definition[:host_address]
         result = {}
+
         if !definition[:get].empty?
           oids = definition[:get]
           begin
-            result = result.merge(client.get(oids, @oid_root_skip, @oid_path_length))
+            data = client.get(oids, @oid_root_skip, @oid_path_length)
+            if data
+              result.update(data)
+            else
+              logger.debug? && logger.debug("get operation returned no response", host: host, oids: oids)
+            end
           rescue => e
-            logger.error("error invoking get operation for OIDs: #{oids}, ignoring",
-                         host: definition[:host_address], exception: e, backtrace: e.backtrace)
+            logger.error("error invoking get operation, ignoring", host: host, oids: oids, exception: e, backtrace: e.backtrace)
           end
         end
+
         if !definition[:walk].empty?
           definition[:walk].each do |oid|
             begin
-              result = result.merge(client.walk(oid, @oid_root_skip, @oid_path_length))
+              data = client.walk(oid, @oid_root_skip, @oid_path_length)
+              if data
+                result.update(data)
+              else
+                logger.debug? && logger.debug("walk operation returned no response", host: host, oid: oid)
+              end
             rescue => e
-              logger.error("error invoking walk operation on OID: #{oid}, ignoring",
-                           host: definition[:host_address], exception: e, backtrace: e.backtrace)
+              logger.error("error invoking walk operation, ignoring", host: host, oid: oid, exception: e, backtrace: e.backtrace)
             end
           end
         end
@@ -220,10 +231,15 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
         if !Array(@tables).empty?
           @tables.each do |table_entry|
             begin
-              result = result.merge(client.table(table_entry, @oid_root_skip, @oid_path_length))
+              data = client.table(table_entry, @oid_root_skip, @oid_path_length)
+              if data
+                result.update(data)
+              else
+                logger.debug? && logger.debug("table operation returned no response", host: host, table: table_entry)
+              end
             rescue => e
-              logger.error("error invoking table operation on OID: #{table_entry['name']}, ignoring",
-                           host: definition[:host_address], exception: e, backtrace: e.backtrace)
+              logger.error("error invoking table operation, ignoring",
+                           host: host, table_name: table_entry['name'], exception: e, backtrace: e.backtrace)
             end
           end
         end
