@@ -232,11 +232,38 @@ describe LogStash::Inputs::Snmp, :ecs_compatibility_support do
         expect(logger).not_to receive(:error)
       end
 
-      it 'generates no events when client (on get) returns no response' do
+      it 'generates no events when client returns no response' do
         config = <<-CONFIG
           input {
             snmp {
               get => ["1.3.6.1.2.1.1.1.0"]
+              hosts => [{ host => "udp:127.0.0.1/161" community => "public" }]
+            }
+          }
+        CONFIG
+        queue = input(config) { |_, queue| queue }
+
+        expect( queue.size ).to eql 0
+      end
+    end
+
+    context 'mocked nil table response' do
+
+      let(:logger) { double("Logger").as_null_object }
+
+      before do
+        expect(mock_client).to receive(:table).once.and_return(nil)
+        allow_any_instance_of(described_class).to receive(:logger).and_return(logger)
+        expect(logger).not_to receive(:error)
+      end
+
+      it 'generates no events when client returns no response' do
+        config = <<-CONFIG
+          input {
+            snmp {
+              tables => [ 
+                { name => "a1Table" "columns" => ["1.3.6.1.4.1.3375.2.2.5.2.3.1.1"] }
+              ]
               hosts => [{ host => "udp:127.0.0.1/161" community => "public" }]
             }
           }
