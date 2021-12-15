@@ -1,3 +1,6 @@
+## 1.3.1
+  -  Refactor: handle no response(s) wout error logging [#105](https://github.com/logstash-plugins/logstash-input-snmp/pull/105)
+
 ## 1.3.0
   - Feat: ECS compliance + optional target [#99](https://github.com/logstash-plugins/logstash-input-snmp/pull/99)
   - Internal: update to Gradle 7 [#102](https://github.com/logstash-plugins/logstash-input-snmp/pull/102)
