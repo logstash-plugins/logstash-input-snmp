@@ -242,7 +242,7 @@ describe LogStash::Inputs::Snmp, :ecs_compatibility_support do
           }
         CONFIG
         queue = input(config) { |_, queue| queue }
-        sleep(0.25) # a bit until run -> client.get executes
+        sleep(0.5) # a bit until run -> client.get executes
 
         expect( queue.size ).to eql 0
       end
@@ -270,7 +270,7 @@ describe LogStash::Inputs::Snmp, :ecs_compatibility_support do
           }
         CONFIG
         queue = input(config) { |_, queue| queue }
-        sleep(0.25) # a bit until run -> client.table executes
+        sleep(0.5) # a bit until run -> client.table executes
 
         expect( queue.size ).to eql 0
       end
