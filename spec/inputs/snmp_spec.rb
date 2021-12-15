@@ -224,11 +224,13 @@ describe LogStash::Inputs::Snmp, :ecs_compatibility_support do
 
     context 'mocked nil get response' do
 
+      let(:logger) { double("Logger").as_null_object }
+
       before do
         expect(mock_client).to receive(:get).once.and_return(nil)
+        allow_any_instance_of(described_class).to receive(:logger).and_return(logger)
+        expect(logger).not_to receive(:error)
       end
-
-      let(:logger) { plugin.logger }
 
       it 'generates no events when client (on get) returns no response' do
         config = <<-CONFIG
