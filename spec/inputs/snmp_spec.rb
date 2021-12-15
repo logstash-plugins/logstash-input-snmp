@@ -136,43 +136,46 @@ describe LogStash::Inputs::Snmp, :ecs_compatibility_support do
 
     before(:each) do
       allow_any_instance_of(described_class).to receive(:ecs_compatibility).and_return(ecs_compatibility)
-    end
 
-    before do
       expect(LogStash::SnmpClient).to receive(:new).and_return(mock_client)
-      expect(mock_client).to receive(:get).and_return({"foo" => "bar"})
       # devutils in v6 calls close on the test pipelines while it does not in v7+
-      expect(mock_client).to receive(:close).at_most(:once)
+      allow(mock_client).to receive(:close).at_most(:once)
     end
 
-    it "shoud add @metadata fields and add default host field" do
-      config = <<-CONFIG
+    context 'mocked get' do
+
+      before do
+        expect(mock_client).to receive(:get).and_return({"foo" => "bar"})
+      end
+
+      it "shoud add @metadata fields and add default host field" do
+        config = <<-CONFIG
           input {
             snmp {
               get => ["1.3.6.1.2.1.1.1.0"]
               hosts => [{ host => "udp:127.0.0.1/161" community => "public" }]
             }
           }
-      CONFIG
-      event = input(config) { |_, queue| queue.pop }
+        CONFIG
+        event = input(config) { |_, queue| queue.pop }
 
-      if ecs_select.active_mode == :disabled
-        expect(event.get("[@metadata][host_protocol]")).to eq("udp")
-        expect(event.get("[@metadata][host_address]")).to eq("127.0.0.1")
-        expect(event.get("[@metadata][host_port]")).to eq("161")
-        expect(event.get("[@metadata][host_community]")).to eq("public")
-        expect(event.get("host")).to eql("127.0.0.1")
-      else
-        expect(event.get("[@metadata][input][snmp][host][protocol]")).to eq("udp")
-        expect(event.get("[@metadata][input][snmp][host][address]")).to eq("127.0.0.1")
-        expect(event.get("[@metadata][input][snmp][host][port]")).to eq('161')
-        expect(event.get("[@metadata][input][snmp][host][community]")).to eq("public")
-        expect(event.get("host")).to eql('ip' => "127.0.0.1")
+        if ecs_select.active_mode == :disabled
+          expect(event.get("[@metadata][host_protocol]")).to eq("udp")
+          expect(event.get("[@metadata][host_address]")).to eq("127.0.0.1")
+          expect(event.get("[@metadata][host_port]")).to eq("161")
+          expect(event.get("[@metadata][host_community]")).to eq("public")
+          expect(event.get("host")).to eql("127.0.0.1")
+        else
+          expect(event.get("[@metadata][input][snmp][host][protocol]")).to eq("udp")
+          expect(event.get("[@metadata][input][snmp][host][address]")).to eq("127.0.0.1")
+          expect(event.get("[@metadata][input][snmp][host][port]")).to eq('161')
+          expect(event.get("[@metadata][input][snmp][host][community]")).to eq("public")
+          expect(event.get("host")).to eql('ip' => "127.0.0.1")
+        end
       end
-    end
 
-    it "should add custom host field (legacy metadata)" do
-      config = <<-CONFIG
+      it "should add custom host field (legacy metadata)" do
+        config = <<-CONFIG
           input {
             snmp {
               get => ["1.3.6.1.2.1.1.1.0"]
@@ -180,14 +183,14 @@ describe LogStash::Inputs::Snmp, :ecs_compatibility_support do
               add_field => { host => "%{[@metadata][host_protocol]}:%{[@metadata][host_address]}/%{[@metadata][host_port]},%{[@metadata][host_community]}" }
             }
           }
-      CONFIG
-      event = input(config) { |_, queue| queue.pop }
+        CONFIG
+        event = input(config) { |_, queue| queue.pop }
 
-      expect(event.get("host")).to eq("udp:127.0.0.1/161,public")
-    end if ecs_select.active_mode == :disabled
+        expect(event.get("host")).to eq("udp:127.0.0.1/161,public")
+      end if ecs_select.active_mode == :disabled
 
-    it "should add custom host field (ECS mode)" do
-      config = <<-CONFIG
+      it "should add custom host field (ECS mode)" do
+        config = <<-CONFIG
           input {
             snmp {
               get => ["1.3.6.1.2.1.1.1.0"]
@@ -195,14 +198,14 @@ describe LogStash::Inputs::Snmp, :ecs_compatibility_support do
               add_field => { "[host][formatted]" => "%{[@metadata][input][snmp][host][protocol]}://%{[@metadata][input][snmp][host][address]}:%{[@metadata][input][snmp][host][port]}" }
             }
           }
-      CONFIG
-      event = input(config) { |_, queue| queue.pop }
+        CONFIG
+        event = input(config) { |_, queue| queue.pop }
 
-      expect(event.get("host")).to eq('formatted' => "tcp://192.168.1.11:1161")
-    end if ecs_select.active_mode != :disabled
+        expect(event.get("host")).to eq('formatted' => "tcp://192.168.1.11:1161")
+      end if ecs_select.active_mode != :disabled
 
-    it "should target event data" do
-      config = <<-CONFIG
+      it "should target event data" do
+        config = <<-CONFIG
           input {
             snmp {
               get => ["1.3.6.1.2.1.1.1.0"]
@@ -210,12 +213,38 @@ describe LogStash::Inputs::Snmp, :ecs_compatibility_support do
               target => "snmp_data"
             }
           }
-      CONFIG
-      event = input(config) { |_, queue| queue.pop }
+        CONFIG
+        event = input(config) { |_, queue| queue.pop }
 
-      expect( event.include?('foo') ).to be false
-      expect( event.get('[snmp_data]') ).to eql 'foo' => 'bar'
+        expect( event.include?('foo') ).to be false
+        expect( event.get('[snmp_data]') ).to eql 'foo' => 'bar'
+      end
+
     end
+
+    context 'mocked nil get response' do
+
+      before do
+        expect(mock_client).to receive(:get).once.and_return(nil)
+      end
+
+      let(:logger) { plugin.logger }
+
+      it 'generates no events when client (on get) returns no response' do
+        config = <<-CONFIG
+          input {
+            snmp {
+              get => ["1.3.6.1.2.1.1.1.0"]
+              hosts => [{ host => "udp:127.0.0.1/161" community => "public" }]
+            }
+          }
+        CONFIG
+        queue = input(config) { |_, queue| queue }
+
+        expect( queue.size ).to eql 0
+      end
+    end
+
   end
 
   context "StoppableIntervalRunner" do
