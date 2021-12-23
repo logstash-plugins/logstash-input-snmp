@@ -192,69 +192,73 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
 
   def run(queue)
     # for now a naive single threaded poller which sleeps off the remaining interval between
-    # each run. each run polls all the defined hosts for the get and walk options.
+    # each run. each run polls all the defined hosts for the get, table and walk options.
     stoppable_interval_runner.every(@interval, "polling hosts") do
-      @client_definitions.each do |definition|
-        client = definition[:client]
-        host = definition[:host_address]
-        result = {}
+      poll_clients(queue)
+    end
+  end
 
-        if !definition[:get].empty?
-          oids = definition[:get]
+  def poll_clients(queue)
+    @client_definitions.each do |definition|
+      client = definition[:client]
+      host = definition[:host_address]
+      result = {}
+
+      if !definition[:get].empty?
+        oids = definition[:get]
+        begin
+          data = client.get(oids, @oid_root_skip, @oid_path_length)
+          if data
+            result.update(data)
+          else
+            logger.debug? && logger.debug("get operation returned no response", host: host, oids: oids)
+          end
+        rescue => e
+          logger.error("error invoking get operation, ignoring", host: host, oids: oids, exception: e, backtrace: e.backtrace)
+        end
+      end
+
+      if !definition[:walk].empty?
+        definition[:walk].each do |oid|
           begin
-            data = client.get(oids, @oid_root_skip, @oid_path_length)
+            data = client.walk(oid, @oid_root_skip, @oid_path_length)
             if data
               result.update(data)
             else
-              logger.debug? && logger.debug("get operation returned no response", host: host, oids: oids)
+              logger.debug? && logger.debug("walk operation returned no response", host: host, oid: oid)
             end
           rescue => e
-            logger.error("error invoking get operation, ignoring", host: host, oids: oids, exception: e, backtrace: e.backtrace)
+            logger.error("error invoking walk operation, ignoring", host: host, oid: oid, exception: e, backtrace: e.backtrace)
           end
         end
+      end
 
-        if !definition[:walk].empty?
-          definition[:walk].each do |oid|
-            begin
-              data = client.walk(oid, @oid_root_skip, @oid_path_length)
-              if data
-                result.update(data)
-              else
-                logger.debug? && logger.debug("walk operation returned no response", host: host, oid: oid)
-              end
-            rescue => e
-              logger.error("error invoking walk operation, ignoring", host: host, oid: oid, exception: e, backtrace: e.backtrace)
+      if !Array(@tables).empty?
+        @tables.each do |table_entry|
+          begin
+            data = client.table(table_entry, @oid_root_skip, @oid_path_length)
+            if data
+              result.update(data)
+            else
+              logger.debug? && logger.debug("table operation returned no response", host: host, table: table_entry)
             end
+          rescue => e
+            logger.error("error invoking table operation, ignoring",
+                         host: host, table_name: table_entry['name'], exception: e, backtrace: e.backtrace)
           end
         end
+      end
 
-        if !Array(@tables).empty?
-          @tables.each do |table_entry|
-            begin
-              data = client.table(table_entry, @oid_root_skip, @oid_path_length)
-              if data
-                result.update(data)
-              else
-                logger.debug? && logger.debug("table operation returned no response", host: host, table: table_entry)
-              end
-            rescue => e
-              logger.error("error invoking table operation, ignoring",
-                           host: host, table_name: table_entry['name'], exception: e, backtrace: e.backtrace)
-            end
-          end
-        end
-
-        unless result.empty?
-          event = targeted_event_factory.new_event(result)
-          event.set(@host_protocol_field, definition[:host_protocol])
-          event.set(@host_address_field, definition[:host_address])
-          event.set(@host_port_field, definition[:host_port])
-          event.set(@host_community_field, definition[:host_community])
-          decorate(event)
-          queue << event
-        else
-          logger.debug? && logger.debug("no snmp data retrieved", host: definition[:host_address])
-        end
+      unless result.empty?
+        event = targeted_event_factory.new_event(result)
+        event.set(@host_protocol_field, definition[:host_protocol])
+        event.set(@host_address_field, definition[:host_address])
+        event.set(@host_port_field, definition[:host_port])
+        event.set(@host_community_field, definition[:host_community])
+        decorate(event)
+        queue << event
+      else
+        logger.debug? && logger.debug("no snmp data retrieved", host: definition[:host_address])
       end
     end
   end
