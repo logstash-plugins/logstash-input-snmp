@@ -1,9 +1,11 @@
 # encoding: utf-8
 require "logstash/devutils/rspec/spec_helper"
 require "logstash/devutils/rspec/shared_examples"
+require 'logstash/plugin_mixins/ecs_compatibility_support/spec_helper'
 require "logstash/inputs/snmp"
 
-describe LogStash::Inputs::Snmp do
+describe LogStash::Inputs::Snmp, :ecs_compatibility_support do
+
   let(:mock_client) { double("LogStash::SnmpClient") }
 
   it_behaves_like "an interruptible input plugin" do
@@ -128,44 +130,262 @@ describe LogStash::Inputs::Snmp do
     end
   end
 
-  context "@metadata" do
-    before do
+  ecs_compatibility_matrix(:disabled, :v1, :v8) do |ecs_select|
+
+    before(:each) do
+      allow_any_instance_of(described_class).to receive(:ecs_compatibility).and_return(ecs_compatibility)
+
       expect(LogStash::SnmpClient).to receive(:new).and_return(mock_client)
-      expect(mock_client).to receive(:get).and_return({"foo" => "bar"})
-      allow(mock_client).to receive(:close)
+      # devutils in v6 calls close on the test pipelines while it does not in v7+
+      allow(mock_client).to receive(:close).at_most(:once)
     end
 
-    it "shoud add @metadata fields and add default host field" do
-      config = <<-CONFIG
+    context 'mocked get' do
+
+      before do
+        expect(mock_client).to receive(:get).and_return({"foo" => "bar"})
+      end
+
+      it "shoud add @metadata fields and add default host field" do
+        config = <<-CONFIG
           input {
             snmp {
               get => ["1.3.6.1.2.1.1.1.0"]
-              hosts => [{host => "udp:127.0.0.1/161" community => "public"}]
+              hosts => [{ host => "udp:127.0.0.1/161" community => "public" }]
             }
           }
-      CONFIG
-      event = input(config) { |_, queue| queue.pop }
+        CONFIG
+        event = input(config) { |_, queue| queue.pop }
 
-      expect(event.get("[@metadata][host_protocol]")).to eq("udp")
-      expect(event.get("[@metadata][host_address]")).to eq("127.0.0.1")
-      expect(event.get("[@metadata][host_port]")).to eq("161")
-      expect(event.get("[@metadata][host_community]")).to eq("public")
-      expect(event.get("host")).to eq("127.0.0.1")
-    end
+        if ecs_select.active_mode == :disabled
+          expect(event.get("[@metadata][host_protocol]")).to eq("udp")
+          expect(event.get("[@metadata][host_address]")).to eq("127.0.0.1")
+          expect(event.get("[@metadata][host_port]")).to eq("161")
+          expect(event.get("[@metadata][host_community]")).to eq("public")
+          expect(event.get("host")).to eql("127.0.0.1")
+        else
+          expect(event.get("[@metadata][input][snmp][host][protocol]")).to eq("udp")
+          expect(event.get("[@metadata][input][snmp][host][address]")).to eq("127.0.0.1")
+          expect(event.get("[@metadata][input][snmp][host][port]")).to eq('161')
+          expect(event.get("[@metadata][input][snmp][host][community]")).to eq("public")
+          expect(event.get("host")).to eql('ip' => "127.0.0.1")
+        end
+      end
 
-    it "shoud add custom host field" do
-      config = <<-CONFIG
+      it "should add custom host field (legacy metadata)" do
+        config = <<-CONFIG
           input {
             snmp {
               get => ["1.3.6.1.2.1.1.1.0"]
-              hosts => [{host => "udp:127.0.0.1/161" community => "public"}]
+              hosts => [{ host => "udp:127.0.0.1/161" community => "public" }]
               add_field => { host => "%{[@metadata][host_protocol]}:%{[@metadata][host_address]}/%{[@metadata][host_port]},%{[@metadata][host_community]}" }
             }
           }
-      CONFIG
-      event = input(config) { |_, queue| queue.pop }
+        CONFIG
+        event = input(config) { |_, queue| queue.pop }
 
-      expect(event.get("host")).to eq("udp:127.0.0.1/161,public")
+        expect(event.get("host")).to eq("udp:127.0.0.1/161,public")
+      end if ecs_select.active_mode == :disabled
+
+      it "should add custom host field (ECS mode)" do
+        config = <<-CONFIG
+          input {
+            snmp {
+              get => ["1.3.6.1.2.1.1.1.0"]
+              hosts => [{ host => "tcp:192.168.1.11/1161" }]
+              add_field => { "[host][formatted]" => "%{[@metadata][input][snmp][host][protocol]}://%{[@metadata][input][snmp][host][address]}:%{[@metadata][input][snmp][host][port]}" }
+            }
+          }
+        CONFIG
+        event = input(config) { |_, queue| queue.pop }
+
+        expect(event.get("host")).to eq('formatted' => "tcp://192.168.1.11:1161")
+      end if ecs_select.active_mode != :disabled
+
+      it "should target event data" do
+        config = <<-CONFIG
+          input {
+            snmp {
+              get => ["1.3.6.1.2.1.1.1.0"]
+              hosts => [{ host => "udp:127.0.0.1/161" community => "public" }]
+              target => "snmp_data"
+            }
+          }
+        CONFIG
+        event = input(config) { |_, queue| queue.pop }
+
+        expect( event.include?('foo') ).to be false
+        expect( event.get('[snmp_data]') ).to eql 'foo' => 'bar'
+      end
+
+    end
+
+    context 'mocked nil get response' do
+
+      let(:config) do
+        {
+            'get' => ["1.3.6.1.2.1.1.1.0"],
+            "hosts" => [{"host" => "udp:127.0.0.1/161", "community" => "public"}]
+        }
+      end
+
+      let(:logger) { double("Logger").as_null_object }
+
+      before do
+        expect(mock_client).to receive(:get).once.and_return(nil)
+        allow_any_instance_of(described_class).to receive(:logger).and_return(logger)
+        expect(logger).not_to receive(:error)
+      end
+
+      it 'generates no events when client returns no response' do
+        input = described_class.new(config).tap { |input| input.register }
+        input.poll_clients queue = Queue.new
+
+        expect( queue.size ).to eql 0
+      end
+    end
+
+    context 'mocked nil table response' do
+
+      let(:config) do
+        {
+            'tables' => [
+                { 'name' => "a1Table", 'columns' => ["1.3.6.1.4.1.3375.2.2.5.2.3.1.1"] }
+            ],
+            "hosts" => [{"host" => "udp:127.0.0.1/161", "community" => "public"}]
+        }
+      end
+
+      let(:logger) { double("Logger").as_null_object }
+
+      before do
+        expect(mock_client).to receive(:table).once.and_return(nil)
+        allow_any_instance_of(described_class).to receive(:logger).and_return(logger)
+        expect(logger).not_to receive(:error)
+      end
+
+      it 'generates no events when client returns no response' do
+        input = described_class.new(config).tap { |input| input.register }
+        input.poll_clients queue = Queue.new
+
+        expect( queue.size ).to eql 0
+      end
+    end
+
+    context 'mocked nil walk response' do
+
+      let(:config) do
+        {
+            'walk' => ["1.3.6.1.2.1.1"],
+            "hosts" => [{"host" => "udp:127.0.0.1/161", "community" => "public"}]
+        }
+      end
+
+      let(:logger) { double("Logger").as_null_object }
+
+      before do
+        expect(mock_client).to receive(:walk).once.and_return(nil)
+        allow_any_instance_of(described_class).to receive(:logger).and_return(logger)
+        expect(logger).not_to receive(:error)
+      end
+
+      it 'generates no events when client returns no response' do
+        input = described_class.new(config).tap { |input| input.register }
+        input.poll_clients queue = Queue.new
+
+        expect( queue.size ).to eql 0
+      end
+    end
+
+  end
+
+  context "StoppableIntervalRunner" do
+    let(:stop_holder) { Struct.new(:value).new(false) }
+
+    before(:each) do
+      allow(plugin).to receive(:stop?) { stop_holder.value }
+    end
+
+    let(:plugin) do
+      double("Plugin").tap do |dbl|
+        allow(dbl).to receive(:logger).and_return(double("Logger").as_null_object)
+        allow(dbl).to receive(:stop?) { stop_holder.value }
+      end
+    end
+
+    subject(:interval_runner) { LogStash::Inputs::Snmp::StoppableIntervalRunner.new(plugin) }
+
+    context "#every" do
+      context "when the plugin is stopped" do
+        let(:interval_seconds) { 2 }
+        it 'does not yield the block' do
+          stop_holder.value = true
+          expect { |yielder| interval_runner.every(interval_seconds, &yielder) }.to_not yield_control
+        end
+      end
+
+      context "when the yield takes shorter than the interval" do
+        let(:duration_seconds) { 1 }
+        let(:interval_seconds) { 2 }
+
+        it 'sleeps off the remainder' do
+          allow(interval_runner).to receive(:sleep).and_call_original
+
+          interval_runner.every(interval_seconds) do
+            Kernel::sleep(duration_seconds) # non-stoppable
+            stop_holder.value = true # prevent re-runs
+          end
+
+          expect(interval_runner).to have_received(:sleep).with(a_value_within(0.1).of(1))
+        end
+      end
+
+      context "when the yield takes longer than the interval" do
+        let(:duration_seconds) { 2 }
+        let(:interval_seconds) { 1 }
+
+        it 'logs a warning to the plugin' do
+          allow(interval_runner).to receive(:sleep).and_call_original
+
+          interval_runner.every(interval_seconds) do
+            Kernel::sleep(duration_seconds) # non-stoppable
+            stop_holder.value = true # prevent re-runs
+          end
+
+          expect(interval_runner).to_not have_received(:sleep)
+
+          expect(plugin.logger).to have_received(:warn).with(a_string_including("took longer"), a_hash_including(:interval_seconds => interval_seconds, :duration_seconds => a_value_within(0.1).of(duration_seconds)))
+        end
+      end
+
+      it 'runs regularly until the plugin is stopped' do
+        timestamps = []
+
+        thread = Thread.new do
+          interval_runner.every(1) do
+            timestamps << Time.now
+            Kernel::sleep(Random::rand(0.8))
+          end
+        end
+
+        Kernel::sleep(5)
+        expect(thread).to be_alive
+
+        stop_holder.value = true
+        Kernel::sleep(1)
+
+        aggregate_failures do
+          expect(thread).to_not be_alive
+          expect(timestamps.count).to be_within(1).of(5)
+
+          timestamps.each_cons(2) do |previous, current|
+            # ensure each start time is very close to 1s after the previous.
+            expect(current - previous).to be_within(0.05).of(1)
+          end
+
+          thread.kill if thread.alive?
+        end
+      end
     end
   end
 

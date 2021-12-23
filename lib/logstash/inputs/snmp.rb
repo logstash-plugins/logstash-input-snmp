@@ -7,11 +7,24 @@ require_relative "snmp/client"
 require_relative "snmp/clientv3"
 require_relative "snmp/mib"
 
+require 'logstash/plugin_mixins/ecs_compatibility_support'
+require 'logstash/plugin_mixins/ecs_compatibility_support/target_check'
+require 'logstash/plugin_mixins/event_support/event_factory_adapter'
+require 'logstash/plugin_mixins/validator_support/field_reference_validation_adapter'
+
 # Generate a repeating message.
 #
 # This plugin is intented only as an example.
 
 class LogStash::Inputs::Snmp < LogStash::Inputs::Base
+
+  include LogStash::PluginMixins::ECSCompatibilitySupport(:disabled, :v1, :v8 => :v1)
+  include LogStash::PluginMixins::ECSCompatibilitySupport::TargetCheck
+
+  include LogStash::PluginMixins::EventSupport::EventFactoryAdapter
+
+  extend LogStash::PluginMixins::ValidatorSupport::FieldReferenceValidationAdapter
+
   config_name "snmp"
 
   # List of OIDs for which we want to retrieve the scalar value
@@ -67,9 +80,6 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
   # The default, `30`, means poll each host every 30 seconds.
   config :interval, :validate => :number, :default => 30
 
-  # Add the default "host" field to the event.
-  config :add_field, :validate => :hash, :default => { "host" => "%{[@metadata][host_address]}" }
-
   # SNMPv3 Credentials
   #
   # A single user can be configured and will be used for all defined SNMPv3 hosts.
@@ -94,8 +104,28 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
   # The SNMPv3 security level can be Authentication, No Privacy; Authentication, Privacy; or no Authentication, no Privacy
   config :security_level, :validate => ["noAuthNoPriv", "authNoPriv", "authPriv"]
 
+  # Defines a target field for placing fields.
+  # If this setting is omitted, data gets stored at the root (top level) of the event.
+  # The target is only relevant while decoding data into a new event.
+  config :target, :validate => :field_reference
+
   BASE_MIB_PATH = ::File.join(__FILE__, "..", "..", "..", "mibs")
   PROVIDED_MIB_PATHS = [::File.join(BASE_MIB_PATH, "logstash"), ::File.join(BASE_MIB_PATH, "ietf")].map { |path| ::File.expand_path(path) }
+
+  def initialize(params={})
+    super(params)
+
+    @host_protocol_field = ecs_select[disabled: '[@metadata][host_protocol]', v1: '[@metadata][input][snmp][host][protocol]']
+    @host_address_field = ecs_select[disabled: '[@metadata][host_address]', v1: '[@metadata][input][snmp][host][address]']
+    @host_port_field = ecs_select[disabled: '[@metadata][host_port]', v1: '[@metadata][input][snmp][host][port]']
+    @host_community_field = ecs_select[disabled: '[@metadata][host_community]', v1: '[@metadata][input][snmp][host][community]']
+
+    # Add the default "host" field to the event, for backwards compatibility, or host.ip in ecs mode
+    unless params.key?('add_field')
+      host_ip_field = ecs_select[disabled: "host", v1: "[host][ip]"]
+      @add_field = { host_ip_field => "%{#{@host_address_field}}" }
+    end
+  end
 
   def register
     validate_oids!
@@ -161,55 +191,80 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
   end
 
   def run(queue)
-    # for now a naive single threaded poller which sleeps for the given interval between
-    # each run. each run polls all the defined hosts for the get and walk options.
-    while !stop?
-      @client_definitions.each do |definition|
-        result = {}
-        if !definition[:get].empty?
-          begin
-            result = result.merge(definition[:client].get(definition[:get], @oid_root_skip, @oid_path_length))
-          rescue => e
-            logger.error("error invoking get operation on #{definition[:host_address]} for OIDs: #{definition[:get]}, ignoring", :exception => e, :backtrace => e.backtrace)
-          end
-        end
-        if  !definition[:walk].empty?
-          definition[:walk].each do |oid|
-            begin
-              result = result.merge(definition[:client].walk(oid, @oid_root_skip, @oid_path_length))
-            rescue => e
-              logger.error("error invoking walk operation on OID: #{oid}, ignoring", :exception => e, :backtrace => e.backtrace)
-            end
-          end
-        end
+    # for now a naive single threaded poller which sleeps off the remaining interval between
+    # each run. each run polls all the defined hosts for the get, table and walk options.
+    stoppable_interval_runner.every(@interval, "polling hosts") do
+      poll_clients(queue)
+    end
+  end
 
-        if  !Array(@tables).empty?
-          @tables.each do |table_entry|
-            begin
-              result = result.merge(definition[:client].table(table_entry, @oid_root_skip, @oid_path_length))
-            rescue => e
-              logger.error("error invoking table operation on OID: #{table_entry['name']}, ignoring", :exception => e, :backtrace => e.backtrace)
-            end
+  def poll_clients(queue)
+    @client_definitions.each do |definition|
+      client = definition[:client]
+      host = definition[:host_address]
+      result = {}
+
+      if !definition[:get].empty?
+        oids = definition[:get]
+        begin
+          data = client.get(oids, @oid_root_skip, @oid_path_length)
+          if data
+            result.update(data)
+          else
+            logger.debug? && logger.debug("get operation returned no response", host: host, oids: oids)
           end
-        end
-
-        unless result.empty?
-          metadata = {
-            "host_protocol" => definition[:host_protocol],
-            "host_address" => definition[:host_address],
-            "host_port" => definition[:host_port],
-            "host_community" => definition[:host_community],
-          }
-          result["@metadata"] = metadata
-
-          event = LogStash::Event.new(result)
-          decorate(event)
-          queue << event
+        rescue => e
+          logger.error("error invoking get operation, ignoring", host: host, oids: oids, exception: e, backtrace: e.backtrace)
         end
       end
 
-      Stud.stoppable_sleep(@interval) { stop? }
+      if !definition[:walk].empty?
+        definition[:walk].each do |oid|
+          begin
+            data = client.walk(oid, @oid_root_skip, @oid_path_length)
+            if data
+              result.update(data)
+            else
+              logger.debug? && logger.debug("walk operation returned no response", host: host, oid: oid)
+            end
+          rescue => e
+            logger.error("error invoking walk operation, ignoring", host: host, oid: oid, exception: e, backtrace: e.backtrace)
+          end
+        end
+      end
+
+      if !Array(@tables).empty?
+        @tables.each do |table_entry|
+          begin
+            data = client.table(table_entry, @oid_root_skip, @oid_path_length)
+            if data
+              result.update(data)
+            else
+              logger.debug? && logger.debug("table operation returned no response", host: host, table: table_entry)
+            end
+          rescue => e
+            logger.error("error invoking table operation, ignoring",
+                         host: host, table_name: table_entry['name'], exception: e, backtrace: e.backtrace)
+          end
+        end
+      end
+
+      unless result.empty?
+        event = targeted_event_factory.new_event(result)
+        event.set(@host_protocol_field, definition[:host_protocol])
+        event.set(@host_address_field, definition[:host_address])
+        event.set(@host_port_field, definition[:host_port])
+        event.set(@host_community_field, definition[:host_community])
+        decorate(event)
+        queue << event
+      else
+        logger.debug? && logger.debug("no snmp data retrieved", host: definition[:host_address])
+      end
     end
+  end
+
+  def stoppable_interval_runner
+    StoppableIntervalRunner.new(self)
   end
 
   def close
@@ -222,10 +277,13 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
     end
   end
 
+  def stop
+  end
+
   private
 
   OID_REGEX = /^\.?([0-9\.]+)$/
-  HOST_REGEX = /^(?<host_protocol>udp|tcp):(?<host_address>.+)\/(?<host_port>\d+)$/i
+  HOST_REGEX = /^(?<host_protocol>\w+):(?<host_address>.+)\/(?<host_port>\d+)$/i
   VERSION_REGEX =/^1|2c|3$/
 
   def validate_oids!
@@ -294,5 +352,46 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
 
   def validate_strip!
     raise(LogStash::ConfigurationError, "you can not specify both oid_root_skip and oid_path_length") if @oid_root_skip > 0 and @oid_path_length > 0
+  end
+
+  ##
+  # The StoppableIntervalRunner is capable of running a block of code at a
+  # repeating interval, while respecting the stop condition of the plugin.
+  class StoppableIntervalRunner
+    ##
+    # @param plugin [#logger,#stop?]
+    def initialize(plugin)
+      @plugin = plugin
+    end
+
+    ##
+    # Runs the provided block repeatedly using the provided interval.
+    # After executing the block, the remainder of the interval if any is slept off
+    # using an interruptible sleep.
+    # If no time remains, a warning is emitted to the logs.
+    #
+    # @param interval_seconds [Integer,Float]
+    # @param desc [String] (default: "operation"): a description to use when logging
+    # @yield
+    def every(interval_seconds, desc="operation", &block)
+      until @plugin.stop?
+        start_time = Time.now
+
+        yield
+
+        duration_seconds = Time.now - start_time
+        if duration_seconds >= interval_seconds
+          @plugin.logger.warn("#{desc} took longer than the configured interval", :interval_seconds => interval_seconds, :duration_seconds => duration_seconds.round(3))
+        else
+          remaining_interval = interval_seconds - duration_seconds
+          sleep(remaining_interval)
+        end
+      end
+    end
+
+    # @api private
+    def sleep(duration)
+      Stud.stoppable_sleep(duration) { @plugin.stop? }
+    end
   end
 end
