@@ -224,6 +224,13 @@ describe LogStash::Inputs::Snmp, :ecs_compatibility_support do
 
     context 'mocked nil get response' do
 
+      let(:config) do
+        {
+            'get' => ["1.3.6.1.2.1.1.1.0"],
+            "hosts" => [{"host" => "udp:127.0.0.1/161", "community" => "public"}]
+        }
+      end
+
       let(:logger) { double("Logger").as_null_object }
 
       before do
@@ -233,22 +240,23 @@ describe LogStash::Inputs::Snmp, :ecs_compatibility_support do
       end
 
       it 'generates no events when client returns no response' do
-        config = <<-CONFIG
-          input {
-            snmp {
-              get => ["1.3.6.1.2.1.1.1.0"]
-              hosts => [{ host => "udp:127.0.0.1/161" community => "public" }]
-            }
-          }
-        CONFIG
-        queue = input(config) { |_, queue| queue }
-        sleep(0.5) # a bit until run -> client.get executes
+        input = described_class.new(config).tap { |input| input.register }
+        input.poll_clients queue = Queue.new
 
         expect( queue.size ).to eql 0
       end
     end
 
     context 'mocked nil table response' do
+
+      let(:config) do
+        {
+            'tables' => [
+                { 'name' => "a1Table", 'columns' => ["1.3.6.1.4.1.3375.2.2.5.2.3.1.1"] }
+            ],
+            "hosts" => [{"host" => "udp:127.0.0.1/161", "community" => "public"}]
+        }
+      end
 
       let(:logger) { double("Logger").as_null_object }
 
@@ -259,24 +267,21 @@ describe LogStash::Inputs::Snmp, :ecs_compatibility_support do
       end
 
       it 'generates no events when client returns no response' do
-        config = <<-CONFIG
-          input {
-            snmp {
-              tables => [ 
-                { name => "a1Table" "columns" => ["1.3.6.1.4.1.3375.2.2.5.2.3.1.1"] }
-              ]
-              hosts => [{ host => "udp:127.0.0.1/161" community => "public" }]
-            }
-          }
-        CONFIG
-        queue = input(config) { |_, queue| queue }
-        sleep(0.5) # a bit until run -> client.table executes
+        input = described_class.new(config).tap { |input| input.register }
+        input.poll_clients queue = Queue.new
 
         expect( queue.size ).to eql 0
       end
     end
 
     context 'mocked nil walk response' do
+
+      let(:config) do
+        {
+            'walk' => ["1.3.6.1.2.1.1"],
+            "hosts" => [{"host" => "udp:127.0.0.1/161", "community" => "public"}]
+        }
+      end
 
       let(:logger) { double("Logger").as_null_object }
 
@@ -287,16 +292,8 @@ describe LogStash::Inputs::Snmp, :ecs_compatibility_support do
       end
 
       it 'generates no events when client returns no response' do
-        config = <<-CONFIG
-          input {
-            snmp {
-              walk => ["1.3.6.1.2.1.1"]
-              hosts => [{ host => "udp:127.0.0.1/161" community => "public" }]
-            }
-          }
-        CONFIG
-        queue = input(config) { |_, queue| queue }
-        sleep(0.5) # a bit until run -> client.walk executes
+        input = described_class.new(config).tap { |input| input.register }
+        input.poll_clients queue = Queue.new
 
         expect( queue.size ).to eql 0
       end
