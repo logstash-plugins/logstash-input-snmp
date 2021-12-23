@@ -390,5 +390,28 @@ describe LogStash::Inputs::Snmp, :ecs_compatibility_support do
       end
     end
   end
+
+  context "close" do
+    let(:config) do
+      <<-CONFIG
+          input {
+            snmp {
+              get => ["1.3.6.1.2.1.1.1.0"]
+              hosts => [{host => "udp:127.0.0.1/161" community => "public"}]
+            }
+          }
+      CONFIG
+    end
+
+    before do
+      expect(LogStash::SnmpClient).to receive(:new).and_return(mock_client)
+      expect(mock_client).to receive(:get).and_return({"foo" => "bar"})
+    end
+
+    it "should call the close method upon termination" do
+      expect(mock_client).to receive(:close).once
+      input(config) { }
+    end
+  end
 end
 
