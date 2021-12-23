@@ -276,6 +276,32 @@ describe LogStash::Inputs::Snmp, :ecs_compatibility_support do
       end
     end
 
+    context 'mocked nil walk response' do
+
+      let(:logger) { double("Logger").as_null_object }
+
+      before do
+        expect(mock_client).to receive(:walk).once.and_return(nil)
+        allow_any_instance_of(described_class).to receive(:logger).and_return(logger)
+        expect(logger).not_to receive(:error)
+      end
+
+      it 'generates no events when client returns no response' do
+        config = <<-CONFIG
+          input {
+            snmp {
+              walk => ["1.3.6.1.2.1.1"]
+              hosts => [{ host => "udp:127.0.0.1/161" community => "public" }]
+            }
+          }
+        CONFIG
+        queue = input(config) { |_, queue| queue }
+        sleep(0.5) # a bit until run -> client.walk executes
+
+        expect( queue.size ).to eql 0
+      end
+    end
+
   end
 
   context "StoppableIntervalRunner" do

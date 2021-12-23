@@ -52,12 +52,12 @@ module LogStash
     end
 
     def walk(oid, strip_root = 0, path_length = 0)
-      result = {}
-
       pdufactory = get_pdu_factory
       treeUtils = TreeUtils.new(@snmp, pdufactory)
       events = treeUtils.getSubtree(@target, OID.new(oid))
       return nil if events.nil? || events.size == 0
+
+      result = {}
 
       events.each do |event|
         next if event.nil?
