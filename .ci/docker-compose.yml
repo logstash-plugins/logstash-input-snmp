@@ -16,10 +16,5 @@ services:
     command: .ci/run.sh
     env_file: ${DOCKER_ENV:-docker.env}
     environment:
-      - SPEC_OPTS="${SPEC_OPTS:--fd}"
-      - LOG_LEVEL # devutils (>= 2.0.4) reads the ENV and sets LS logging
-      - CI # CI=true in Travis-CI
-      - TRAVIS # TRAVIS=true in Travis-CI
-      - ELASTIC_STACK_VERSION=$ELASTIC_STACK_VERSION
-      - SNAPSHOT=${SNAPSHOT:-false}
+      - SPEC_OPTS
     tty: true
