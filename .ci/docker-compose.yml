@@ -1,0 +1,25 @@
+# docker ipv6 only support in version 2.x
+version: '2.4'
+
+# run tests:  cd ci/unit; docker-compose up --build --force-recreate
+# manual:  cd ci/unit; docker-compose run logstash bash
+services:
+
+  logstash:
+    build:
+      context: ../
+      dockerfile: .ci/Dockerfile
+      args:
+        - ELASTIC_STACK_VERSION=$ELASTIC_STACK_VERSION
+        - DISTRIBUTION=${DISTRIBUTION:-default}
+        #- INTEGRATION=false
+    command: .ci/run.sh
+    env_file: ${DOCKER_ENV:-docker.env}
+    environment:
+      - SPEC_OPTS="${SPEC_OPTS:--fd}"
+      - LOG_LEVEL # devutils (>= 2.0.4) reads the ENV and sets LS logging
+      - CI # CI=true in Travis-CI
+      - TRAVIS # TRAVIS=true in Travis-CI
+      - ELASTIC_STACK_VERSION=$ELASTIC_STACK_VERSION
+      - SNAPSHOT=${SNAPSHOT:-false}
+    tty: true
