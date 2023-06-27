@@ -1,3 +1,6 @@
+## 1.3.2
+  -  Docs: add troubleshooting help for "failed to locate MIB module" error when using smidump to convert MIBs
+
 ## 1.3.1
   -  Refactor: handle no response(s) wout error logging [#105](https://github.com/logstash-plugins/logstash-input-snmp/pull/105)
 
