@@ -2,7 +2,7 @@ require "logstash/devutils/rspec/spec_helper"
 require "logstash/inputs/snmp"
 
 describe LogStash::Inputs::Snmp do
-  let(:config) { {"get" => ["1.3.6.1.2.1.1.1.0", "1.3.6.1.2.1.1.3.0", "1.3.6.1.2.1.1.5.0"]} }
+  let(:config) { {"get" => %w[1.3.6.1.2.1.1.1.0 1.3.6.1.2.1.1.3.0 1.3.6.1.2.1.1.5.0], "ecs_compatibility" => "disabled" } }
   let(:plugin) { LogStash::Inputs::Snmp.new(config)}
 
   shared_examples "snmp plugin return single event" do
@@ -114,8 +114,8 @@ describe LogStash::Inputs::Snmp do
   end
 
   describe "multiple pipelines and mix of udp tcp hosts", :integration => true do
-    let(:config) { {"get" => ["1.3.6.1.2.1.1.1.0"], "hosts" => [{"host" => "udp:snmp1/161", "community" => "public"}]} }
-    let(:config2) { {"get" => ["1.3.6.1.2.1.1.1.0"], "hosts" => [{"host" => "tcp:snmp2/162", "community" => "public"}]} }
+    let(:config) { {"get" => ["1.3.6.1.2.1.1.1.0"], "hosts" => [{"host" => "udp:snmp1/161", "community" => "public"}], "ecs_compatibility" => "disabled" } }
+    let(:config2) { {"get" => ["1.3.6.1.2.1.1.1.0"], "hosts" => [{"host" => "tcp:snmp2/162", "community" => "public"}], "ecs_compatibility" => "disabled"} }
     let(:plugin) { LogStash::Inputs::Snmp.new(config)}
     let(:plugin2) { LogStash::Inputs::Snmp.new(config2)}
 
@@ -148,10 +148,12 @@ describe LogStash::Inputs::Snmp do
           snmp {
             get => ["1.3.6.1.2.1.1.1.0"]
             hosts => [{host => "udp:snmp1/161" community => "public"}]
+            ecs_compatibility => "disabled"
           }
           snmp {
             get => ["1.3.6.1.2.1.1.1.0"]
             hosts => [{host => "tcp:snmp2/162" community => "public"}]
+            ecs_compatibility => "disabled"
           }
         }
     CONFIG
@@ -171,6 +173,7 @@ describe LogStash::Inputs::Snmp do
             priv_protocol => "aes"
             priv_pass => "STr0ngP@SSWRD161"
             security_level => "authPriv"
+            ecs_compatibility => "disabled"
           }
           snmp {
             get => ["1.3.6.1.2.1.1.1.0"]
@@ -181,6 +184,7 @@ describe LogStash::Inputs::Snmp do
             priv_protocol => "aes"
             priv_pass => "STr0ngP@SSWRD162"
             security_level => "authPriv"
+            ecs_compatibility => "disabled"
           }
         }
     CONFIG
