@@ -14,8 +14,7 @@ services:
         - DISTRIBUTION=${DISTRIBUTION:-default}
         #- INTEGRATION=false
     command: .ci/run.sh
-    env_file: docker.env
+    env_file: ${DOCKER_ENV:-docker.env}
     environment:
       - SPEC_OPTS
-      #- JRUBY_OPTS
     tty: true
