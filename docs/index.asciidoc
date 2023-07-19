@@ -66,13 +66,15 @@ Note that the resulting file as output by `smidump` must have the `.dic` extensi
 [id="plugins-{type}s-{plugin}-locate-mibs"]
 ===== Preventing a `failed to locate MIB module` error 
 
-As `smidump` looks for mib dependencies in its pre-configured path lists as defined in the documentaion in the https://www.ibr.cs.tu-bs.de/projects/libsmi/smi_config.html["MODULES LOCATIONS"] section.
-You may need to provide the paths to locations of MIBs in your particular environment to avoid a `failed to locate MIB module` error.
+The `smidump` function looks for mib dependencies in its pre-configured path lists.
+You may need to provide the paths to locations of MIBs in your particular environment.
 
-You can avoid this issue by providing the additional path configuration information with:
+You can avoid  to avoid a `failed to locate MIB module` error by providing the additional path configuration information with:
 
 * an environment variable, or 
 * a config file to provide the additional path configuration.
+
+See the "MODULE LOCATIONS" section of the https://www.ibr.cs.tu-bs.de/projects/libsmi/smi_config.html[smi_config documentation] for more info. 
 
 [id="plugins-{type}s-{plugin}-env-var"]
 ===== Option 1: Use an environment variable 
