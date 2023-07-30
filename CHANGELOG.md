@@ -1,3 +1,6 @@
+## 1.3.3
+  - Silence warnings when loading dictionary MIB files [#118](https://github.com/logstash-plugins/logstash-input-snmp/pull/118)
+
 ## 1.3.2
   -  [DOC] Add troubleshooting help for "failed to locate MIB module" error when using smidump to convert MIBs [#112](https://github.com/logstash-plugins/logstash-input-snmp/pull/112)
   -  Fix CI failures [#113](https://github.com/logstash-plugins/logstash-input-snmp/pull/113)
