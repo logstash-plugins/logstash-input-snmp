@@ -166,9 +166,11 @@ module LogStash
       raise(SnmpMibError, "error parsing mib dic file: #{filename}, error: #{e.message}")
     end
 
+    # MIB definition files may have duplicate entries that, since Ruby 2.7, generate warnings when they are converted to a hash.
+    # This method will suppress these warnings, unless `debug` logging is enabled.
     def silence_warnings
       warn_level = $VERBOSE
-      $VERBOSE = nil
+      $VERBOSE = logger.debug? ? warn_level : nil
       yield
     ensure
       $VERBOSE = warn_level
