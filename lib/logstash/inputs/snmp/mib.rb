@@ -157,11 +157,23 @@ module LogStash
         sub('MIB =', 'mib =')
 
       mib = nil
-      eval(mib_hash)
+      silence_warnings do
+        eval(mib_hash)
+      end
       mib
     rescue Exception => e
       # rescuing Exception class is important here to rescue SyntaxError from eval
       raise(SnmpMibError, "error parsing mib dic file: #{filename}, error: #{e.message}")
+    end
+
+    # MIB definition files may have duplicate entries that, since Ruby 2.7, generate warnings when they are converted to a hash.
+    # This method will suppress these warnings, unless `debug` logging is enabled.
+    def silence_warnings
+      warn_level = $VERBOSE
+      $VERBOSE = logger.debug? ? warn_level : nil
+      yield
+    ensure
+      $VERBOSE = warn_level
     end
   end
 end
