@@ -89,7 +89,7 @@ $ SMIPATH=":/path/to/mibs/" smidump -k -f python CISCO-PROCESS-MIB.mib > CISCO-P
 <1> Notice the colon that preceeds the path definition. 
 
 [id="plugins-{type}s-{plugin}-mib-config"]
-===== Option 2: Provide a coniguration file
+===== Option 2: Provide a configuration file
 
 The other approach is to create a configuration file with the `path` option. For example, you could create a file called `smi.conf`.
 
