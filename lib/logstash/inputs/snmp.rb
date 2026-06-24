@@ -156,8 +156,8 @@ class LogStash::Inputs::Snmp < LogStash::Inputs::Base
       version = host["version"] || "2c"
       raise(LogStash::ConfigurationError, "only protocol version '1', '2c' and '3' are supported for host option '#{host_name}'") unless version =~ VERSION_REGEX
 
-      retries = host["retries"] || 2
-      timeout = host["timeout"] || 1000
+      retries = host["retries"]&.to_i || 2
+      timeout = host["timeout"]&.to_i || 1000
 
       # TODO: move these validations in a custom validator so it happens before the register method is called.
       host_details = host_name.match(HOST_REGEX)
